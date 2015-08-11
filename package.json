@@ -1,0 +1,36 @@
+{
+  "name": "hapi-serve-s3",
+  "version": "0.0.0",
+  "description": "Easily serve files from S3 using Hapi",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepublish": "make dist"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bjyoungblood/hapi-serve-s3.git"
+  },
+  "keywords": [
+    "hapi",
+    "s3"
+  ],
+  "author": "Ben Youngblood",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/bjyoungblood/hapi-serve-s3/issues"
+  },
+  "homepage": "https://github.com/bjyoungblood/hapi-serve-s3#readme",
+  "dependencies": {
+    "aws-sdk": "^2.1.44",
+    "bluebird": "^2.9.34",
+    "boom": "^2.8.0",
+    "joi": "^6.6.1",
+    "lodash": "^3.10.1"
+  },
+  "devDependencies": {
+    "babel": "^5.8.21",
+    "babel-eslint": "^4.0.5",
+    "eslint": "^1.1.0"
+  }
+}
