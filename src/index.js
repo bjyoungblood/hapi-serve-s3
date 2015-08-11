@@ -40,7 +40,7 @@ const routeOptionsSchema = Joi.object().keys({
   key : Joi.alternatives().try(
     Joi.string(),
     Joi.func()
-  ).default(''),
+  ).optional(),
 
   // use SSL when communicating with S3 (default true)
   sslEnabled : Joi.boolean().default(true),
@@ -101,7 +101,7 @@ function getKey(request) {
   const opts = request.route.settings.plugins.s3;
 
   return new Promise((resolve, reject) => {
-    if (_.isString(opts.key)) {
+    if (_.isString(opts.key) || !opts.key) {
       if (request.params.path) {
         return resolve(path.join(opts.key, request.params.path));
       }
