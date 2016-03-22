@@ -185,12 +185,10 @@ function handler(request, reply) {
           if (disposition) {
             response.header('Content-Disposition', disposition);
           }
-        })
-        .catch((err) => {
-          reply(err);
         });
     }
-  );
+  )
+    .catch((err) => reply(err));
 }
 
 function register(server, options, next) {
