@@ -26,11 +26,16 @@ const routeOptionsSchema = Joi.object().keys({
   // example: { "application/octet-stream" : "application/pdf" }
   overrideContentTypes: Joi.object().optional().default({}),
 
-  // bucket to serve files from
-  bucket: Joi.string().required(),
-
   // bucket's region (defaults to us-standard/us-east-1)
   region: Joi.string().optional().default('us-east-1'),
+
+  // If a string is provided it will be used as bucket name.
+  // If a function is proviced, it will receive the request and should return a promise
+  // that resolves the mapped `bucket`.
+  bucket: Joi.alternatives().try(
+    Joi.string(),
+    Joi.func()
+  ).required(),
 
   // If a string is provided, then it will be used to look up the key:
   //   - if the route contains a parameter called "path", the key will be treated as a prefix
@@ -52,13 +57,10 @@ const routeOptionsSchema = Joi.object().keys({
   allowUnknown: false,
 });
 
-function getObjectStream(request, key) {
+function getObjectStream(request, bucket, key) {
   const routeOptions = request.route.settings.plugins.s3;
 
   const s3 = new AWS.S3({
-    params: {
-      Bucket: routeOptions.bucket,
-    },
     accessKeyId: routeOptions.accessKeyId,
     secretAccessKey: routeOptions.secretAccessKey,
     region: routeOptions.region,
@@ -66,7 +68,7 @@ function getObjectStream(request, key) {
   });
 
   return new Promise((resolve, reject) => {
-    const req = s3.getObject({ Key: key });
+    const req = s3.getObject({ Bucket: bucket, Key: key });
     const passthrough = new PassThrough();
 
     req.on('error', (err) => reject(err));
@@ -88,27 +90,42 @@ function getObjectStream(request, key) {
   });
 }
 
-function getKey(request) {
-  const opts = request.route.settings.plugins.s3;
+function getBucket(request) {
+  const { bucket } = request.route.settings.plugins.s3;
 
-  return new Promise((resolve, reject) => {
-    if (!opts.key || _.isString(opts.key)) {
-      if (request.params.path) {
-        return resolve(path.join(opts.key, request.params.path));
+  if (_.string(bucket)) {
+    return Promise.resolve(bucket);
+  }
+
+  return bucket(request)
+    .then((mappedBucket) => {
+      if (!mappedBucket) {
+        return Promise.reject(new Error('Empty S3 Bucket'));
       }
 
-      return resolve(opts.key);
+      return mappedBucket;
+    });
+}
+
+function getKey(request) {
+  const { key } = request.route.settings.plugins.s3;
+
+  if (!key || _.isString(key)) {
+    if (request.params.path) {
+      return Promise.resolve(path.join(key, request.params.path));
     }
 
-    return opts.key(request)
-      .then((key) => {
-        if (!key) {
-          return reject(new Error('Empty S3 key'));
-        }
+    return Promise.resolve(key);
+  }
 
-        return resolve(key);
-      });
-  });
+  return key(request)
+    .then((mappedKey) => {
+      if (!mappedKey) {
+        return Promise.reject(new Error('Empty S3 key'));
+      }
+
+      return mappedKey;
+    });
 }
 
 function getFilename(request) {
@@ -147,9 +164,10 @@ function getContentDisposition(request, filename) {
 
 function handler(request, reply) {
   Promise.join(
+    getBucket(request),
     getKey(request),
     getFilename(request),
-    (key, filename) => getObjectStream(request, key)
+    (bucket, key, filename) => getObjectStream(request, bucket, key)
         .then((data) => {
           const response = reply(data.stream);
 
