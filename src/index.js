@@ -15,7 +15,8 @@ const routeOptionsSchema = Joi.object().keys({
 
   // If provided, the function will receive the request and it should return a promise
   // that resolves the mapped `filename`. `filename` will then be added to the
-  // Content-Disposition header.
+  // Content-Disposition header. If mode is not false but no function is given `filename`
+  // will be set to the key's filename
   filename: Joi.alternatives().when('mode', {
     is: false,
     then: Joi.forbidden(),
@@ -122,10 +123,10 @@ function getKey(request) {
   return Promise.resolve(key(request));
 }
 
-function getFilename(request) {
+function getFilename(request, key) {
   const { filename } = request.route.settings.plugins.s3;
   if (!filename) {
-    return Promise.resolve();
+    return Promise.resolve(path.basename(key));
   }
 
   return Promise.resolve(filename(request));
@@ -157,7 +158,11 @@ function getContentDisposition(request, filename) {
 }
 
 function handler(request, reply) {
-  return Promise.all([getBucket(request), getKey(request), getFilename(request)])
+  return Promise.all([getBucket(request), getKey(request)])
+    .then(([bucket, key]) => { // eslint-disable-line arrow-body-style
+      return getFilename(request, key)
+        .then((filename) => [bucket, key, filename]);
+    })
     .then(([bucket, key, filename]) => { // eslint-disable-line arrow-body-style
       return getObjectStream(request, bucket, key)
         .then((data) => {
