@@ -84,7 +84,25 @@ describe('hapi integration', () => {
     });
   });
 
-  describe('calling a valid route', () => {
+  before('define route without filename', () => { // eslint-disable-line arrow-body-style
+    return server.route({
+      method: 'GET',
+      path: '/files2/{path*}',
+      handler: {
+        s3: {
+          s3Params: { // these options are just for testing purpose
+            s3ForcePathStyle: true,
+            endpoint: new AWS.Endpoint('http://localhost:4569'),
+          },
+          mode: 'attachment',
+          bucket: 'test',
+          key: 'files2', // used as prefix
+        },
+      },
+    });
+  });
+
+  describe('calling route where key, bucket and filename are functions', () => {
     let response;
 
     before('call test route', () => { // eslint-disable-line arrow-body-style
@@ -114,7 +132,7 @@ describe('hapi integration', () => {
     });
   });
 
-  describe('calling an ivalid route', () => {
+  describe('test custom validation pre handler', () => {
     let response;
 
     before('call test route', () => { // eslint-disable-line arrow-body-style
@@ -129,6 +147,32 @@ describe('hapi integration', () => {
 
     it('should respond with 401 (Unauthorized)', () => {
       expect(response.statusCode).to.equal(401);
+    });
+  });
+
+  describe('calling route where key and bucket are strings and filename is not defined', () => {
+    let response;
+
+    before('call test route', () => { // eslint-disable-line arrow-body-style
+      return server.inject({
+        method: 'GET',
+        url: '/files2/1.pdf',
+      })
+      .then((res) => {
+        response = res;
+      });
+    });
+
+    it('should respond with 200 (OK)', () => {
+      expect(response.statusCode).to.equal(200);
+    });
+
+    it('should set the correct content-disposition headers', () => {
+      expect(response.headers['content-disposition']).to.equal('attachment; filename=1.pdf');
+    });
+
+    it('should respond with the content of the s3 file', () => {
+      expect(response.payload).to.equal('test\ntest\ntest\ntest\n');
     });
   });
 });
