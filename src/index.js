@@ -10,86 +10,88 @@ import path from 'path';
 import pkg from '../package.json';
 
 const routeOptionsSchema = Joi.object().keys({
-  // specifies whether to include the Content-Disposition header
-  mode : Joi.valid(false, 'attachment', 'inline'),
+  // Specifies whether to include the Content-Disposition header.
+  mode: Joi.valid(false, 'attachment', 'inline').default(false),
 
-  // if provided, the function will be passed the request and a callback of the
-  // form `function(err, filename)`. `filename` will then be added to the
-  // Content-Disposition header
-  filename : Joi.alternatives().when('mode', {
-    is : false,
-    then : Joi.forbidden(),
-    otherwise : Joi.func().optional(),
+  // If provided, the function will receive the request and it should return a promise
+  // that resolves the mapped `filename`. `filename` will then be added to the
+  // Content-Disposition header. If mode is not false but no function is given `filename`
+  // will be set to the key's filename
+  filename: Joi.alternatives().when('mode', {
+    is: false,
+    then: Joi.forbidden(),
+    otherwise: Joi.func().optional(),
   }),
 
-  // if S3's reported content-type is key, replace it with value
+  // If S3's reported content-type is key, replace it with value
   // example: { "application/octet-stream" : "application/pdf" }
-  overrideContentTypes : Joi.object().optional().default({}),
-
-  // bucket to serve files from
-  bucket : Joi.string().required(),
+  overrideContentTypes: Joi.object().optional().default({}),
 
   // bucket's region (defaults to us-standard/us-east-1)
-  region : Joi.string().optional().default('us-east-1'),
+  region: Joi.string().optional().default('us-east-1'),
 
-  // if a string is provided, then it will be used to look up the key
+  // If a string is provided it will be used as bucket name.
+  // If a function is proviced, it will receive the request and should return a promise
+  // that resolves the mapped `bucket`.
+  bucket: Joi.alternatives().try(
+    Joi.string(),
+    Joi.func()
+  ).required(),
+
+  // If a string is provided, then it will be used to look up the key:
   //   - if the route contains a parameter called "path", the key will be treated as a prefix
   //   - otherwise, the key will be treated as a literal S3 key
-  // if a function is provided, it will be passed the request and a callback of the
-  //   form `function(err, key)`.
-  key : Joi.alternatives().try(
+  // If a function is provided, it will receive the request and it should return a promise
+  // that resolves the mapped `key`.
+  key: Joi.alternatives().try(
     Joi.string(),
     Joi.func()
   ).optional(),
 
   // use SSL when communicating with S3 (default true)
-  sslEnabled : Joi.boolean().default(true),
+  sslEnabled: Joi.boolean().default(true),
 
   // key id and secret key (defaults to environment)
-  accessKeyId : Joi.string().optional().default(process.env.AWS_ACCESS_KEY_ID),
-  secretAccessKey : Joi.string().optional().default(process.env.AWS_SECRET_ACCESS_KEY),
+  accessKeyId: Joi.string().optional().default(process.env.AWS_ACCESS_KEY_ID),
+  secretAccessKey: Joi.string().optional().default(process.env.AWS_SECRET_ACCESS_KEY),
+
+  // additional aws s3 options
+  s3Params: Joi.object().optional().default({}),
 }).options({
-  allowUnknown : false,
+  allowUnknown: false,
 });
 
-function getObjectStream(request, key) {
-  let routeOptions = request.route.settings.plugins.s3;
+function getObjectStream(request, bucket, key) {
+  if (_.isEmpty(bucket) || _.isEmpty(key)) {
+    return Promise.reject('bucket and key should not be empty');
+  }
 
-  let s3 = new AWS.S3({
-    params : {
-      Bucket : routeOptions.bucket,
-    },
-    accessKeyId : routeOptions.accessKeyId,
-    secretAccessKey : routeOptions.secretAccessKey,
-    region : routeOptions.region,
-    sslEnabled : routeOptions.sslEnabled,
+  const routeOptions = request.route.settings.plugins.s3;
+
+  const s3 = new AWS.S3({
+    accessKeyId: routeOptions.accessKeyId,
+    secretAccessKey: routeOptions.secretAccessKey,
+    region: routeOptions.region,
+    sslEnabled: routeOptions.sslEnabled,
+    ...routeOptions.s3Params,
   });
 
   return new Promise((resolve, reject) => {
-    let req = s3.getObject({ Key : key });
-    let passthrough = new PassThrough();
+    const req = s3.getObject({ Bucket: bucket, Key: key });
+    const passthrough = new PassThrough();
 
-    req.on('error', (err) => {
-      reject(err);
-    });
-
-    req.on('httpData', (chunk) => {
-      passthrough.write(chunk);
-    });
-
-    req.on('httpDone', () => {
-      passthrough.end();
-    });
+    req.on('error', (err) => reject(err));
+    req.on('httpData', (chunk) => passthrough.write(chunk));
+    req.on('httpDone', () => passthrough.end());
 
     req.on('httpHeaders', (statusCode, headers) => {
       if (statusCode >= 400) {
-        reject(Boom.create(statusCode));
-        return;
+        return reject(Boom.create(statusCode));
       }
 
-      resolve({
-        headers : headers,
-        stream : passthrough,
+      return resolve({
+        headers,
+        stream: passthrough,
       });
     });
 
@@ -97,121 +99,109 @@ function getObjectStream(request, key) {
   });
 }
 
-function getKey(request) {
-  const opts = request.route.settings.plugins.s3;
+function getBucket(request) {
+  const { bucket } = request.route.settings.plugins.s3;
 
-  return new Promise((resolve, reject) => {
-    if (_.isString(opts.key) || !opts.key) {
-      if (request.params.path) {
-        return resolve(path.join(opts.key, request.params.path));
-      }
+  if (_.isString(bucket)) {
+    return Promise.resolve(bucket);
+  }
 
-      return resolve(opts.key);
-    }
-
-    opts.key(request, function(err, key) {
-      if (err instanceof Error) {
-        return reject(err);
-      }
-
-      if (! key) {
-        return reject(new Error('Empty S3 key'));
-      }
-
-      return resolve(key);
-    });
-  });
+  return Promise.resolve(bucket(request));
 }
 
-function getFilename(request) {
-  const opts = request.route.settings.plugins.s3;
+function getKey(request) {
+  const { key } = request.route.settings.plugins.s3;
 
-  return new Promise((resolve, reject) => {
-    if (! opts.filename) {
-      return resolve();
+  if (!key || _.isString(key)) {
+    if (request.params.path) {
+      return Promise.resolve(path.join(key, request.params.path));
     }
 
-    opts.filename(request, function(err, filename) {
-      if (err instanceof Error) {
-        return reject(err);
-      }
+    return Promise.resolve(key);
+  }
 
-      return resolve(filename);
-    });
-  });
+  return Promise.resolve(key(request));
+}
+
+function getFilename(request, key) {
+  const { filename } = request.route.settings.plugins.s3;
+  if (!filename) {
+    return Promise.resolve(path.basename(key));
+  }
+
+  return Promise.resolve(filename(request));
 }
 
 function getContentType(request, s3ContentType) {
-  let routeOptions = request.route.settings.plugins.s3;
+  const { overrideContentTypes } = request.route.settings.plugins.s3;
 
-  if (s3ContentType && routeOptions.overrideContentTypes[s3ContentType]) {
-    return routeOptions.overrideContentTypes[s3ContentType];
+  if (s3ContentType && overrideContentTypes[s3ContentType]) {
+    return overrideContentTypes[s3ContentType];
   }
 
   return s3ContentType;
 }
 
 function getContentDisposition(request, filename) {
-  let routeOptions = request.route.settings.plugins.s3;
+  const { mode } = request.route.settings.plugins.s3;
 
-  if (! routeOptions.mode) {
+  if (!mode) {
     return null;
   }
 
-  let disposition = routeOptions.mode;
+  let disposition = mode;
   if (filename) {
-    disposition += '; filename=' + filename;
+    disposition = `${disposition}; filename=${filename}`;
   }
 
   return disposition;
 }
 
 function handler(request, reply) {
-
-  Promise.join(
-    getKey(request),
-    getFilename(request),
-    function(key, filename) {
-      return getObjectStream(request, key)
+  return Promise.all([getBucket(request), getKey(request)])
+    .then(([bucket, key]) => { // eslint-disable-line arrow-body-style
+      return getFilename(request, key)
+        .then((filename) => [bucket, key, filename]);
+    })
+    .then(([bucket, key, filename]) => { // eslint-disable-line arrow-body-style
+      return getObjectStream(request, bucket, key)
         .then((data) => {
-          let response = reply(data.stream);
+          const response = reply(data.stream);
 
-          let contentType = getContentType(request, data.headers['content-type']);
+          const contentType = getContentType(request, data.headers['content-type']);
           if (contentType) {
-            response.header('Content-Type', contentType);
+            response.type(contentType);
           }
 
-          let disposition = getContentDisposition(request, filename);
+          const disposition = getContentDisposition(request, filename);
           if (disposition) {
             response.header('Content-Disposition', disposition);
           }
         });
-    }
-  )
+    })
     .catch((err) => reply(err));
 }
 
 function register(server, options, next) {
-
-  let s3Handler = function(route, routeOptions) {
+  function s3Handler(route, routeOptions) {
     if (route.method !== 'get') {
       throw new Error('s3 handler currently only supports GET');
     }
 
-    let valid = Joi.validate(routeOptions, routeOptionsSchema);
+    const valid = Joi.validate(routeOptions, routeOptionsSchema);
     if (valid.error) {
       throw valid.error;
     }
 
-    route.settings.plugins.s3 = valid.value;
+    route.settings.plugins.s3 = valid.value; // eslint-disable-line no-param-reassign
 
     return handler;
-  };
+  }
 
   s3Handler.defaults = {
-    payload : {
-      output : 'stream',
-      parse : false,
+    payload: {
+      output: 'stream',
+      parse: false,
     },
   };
 
@@ -221,9 +211,9 @@ function register(server, options, next) {
 }
 
 register.attributes = {
-  name : pkg.name,
-  version : pkg.version,
-  multiple : false,
+  name: pkg.name,
+  version: pkg.version,
+  multiple: false,
 };
 
 export default register;
