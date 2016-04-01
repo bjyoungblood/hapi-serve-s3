@@ -1,6 +1,6 @@
 {
   "name": "hapi-serve-s3",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Easily serve files from S3 using Hapi",
   "main": "dist/index.js",
   "scripts": {
