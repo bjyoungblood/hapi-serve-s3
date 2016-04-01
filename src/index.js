@@ -11,7 +11,7 @@ import pkg from '../package.json';
 
 const routeOptionsSchema = Joi.object().keys({
   // Specifies whether to include the Content-Disposition header.
-  mode: Joi.valid(false, 'attachment', 'inline'),
+  mode: Joi.valid(false, 'attachment', 'inline').default(false),
 
   // If provided, the function will receive the request and it should return a promise
   // that resolves the mapped `filename`. `filename` will then be added to the
@@ -53,11 +53,18 @@ const routeOptionsSchema = Joi.object().keys({
   // key id and secret key (defaults to environment)
   accessKeyId: Joi.string().optional().default(process.env.AWS_ACCESS_KEY_ID),
   secretAccessKey: Joi.string().optional().default(process.env.AWS_SECRET_ACCESS_KEY),
+
+  // additional aws s3 options
+  s3Params: Joi.object().optional().default({}),
 }).options({
   allowUnknown: false,
 });
 
 function getObjectStream(request, bucket, key) {
+  if (_.isEmpty(bucket) || _.isEmpty(key)) {
+    return Promise.reject('bucket and key should not be empty');
+  }
+
   const routeOptions = request.route.settings.plugins.s3;
 
   const s3 = new AWS.S3({
@@ -65,6 +72,7 @@ function getObjectStream(request, bucket, key) {
     secretAccessKey: routeOptions.secretAccessKey,
     region: routeOptions.region,
     sslEnabled: routeOptions.sslEnabled,
+    ...routeOptions.s3Params,
   });
 
   return new Promise((resolve, reject) => {
@@ -93,18 +101,11 @@ function getObjectStream(request, bucket, key) {
 function getBucket(request) {
   const { bucket } = request.route.settings.plugins.s3;
 
-  if (_.string(bucket)) {
+  if (_.isString(bucket)) {
     return Promise.resolve(bucket);
   }
 
-  return bucket(request)
-    .then((mappedBucket) => {
-      if (!mappedBucket) {
-        return Promise.reject(new Error('Empty S3 Bucket'));
-      }
-
-      return mappedBucket;
-    });
+  return Promise.resolve(bucket(request));
 }
 
 function getKey(request) {
@@ -118,43 +119,36 @@ function getKey(request) {
     return Promise.resolve(key);
   }
 
-  return key(request)
-    .then((mappedKey) => {
-      if (!mappedKey) {
-        return Promise.reject(new Error('Empty S3 key'));
-      }
-
-      return mappedKey;
-    });
+  return Promise.resolve(key(request));
 }
 
 function getFilename(request) {
-  const opts = request.route.settings.plugins.s3;
-  if (!opts.filename) {
+  const { filename } = request.route.settings.plugins.s3;
+  if (!filename) {
     return Promise.resolve();
   }
 
-  return opts.filename(request);
+  return Promise.resolve(filename(request));
 }
 
 function getContentType(request, s3ContentType) {
-  const routeOptions = request.route.settings.plugins.s3;
+  const { overrideContentTypes } = request.route.settings.plugins.s3;
 
-  if (s3ContentType && routeOptions.overrideContentTypes[s3ContentType]) {
-    return routeOptions.overrideContentTypes[s3ContentType];
+  if (s3ContentType && overrideContentTypes[s3ContentType]) {
+    return overrideContentTypes[s3ContentType];
   }
 
   return s3ContentType;
 }
 
 function getContentDisposition(request, filename) {
-  const routeOptions = request.route.settings.plugins.s3;
+  const { mode } = request.route.settings.plugins.s3;
 
-  if (!routeOptions.mode) {
+  if (!mode) {
     return null;
   }
 
-  let disposition = routeOptions.mode;
+  let disposition = mode;
   if (filename) {
     disposition = `${disposition}; filename=${filename}`;
   }
@@ -163,11 +157,9 @@ function getContentDisposition(request, filename) {
 }
 
 function handler(request, reply) {
-  Promise.join(
-    getBucket(request),
-    getKey(request),
-    getFilename(request),
-    (bucket, key, filename) => getObjectStream(request, bucket, key)
+  return Promise.all([getBucket(request), getKey(request), getFilename(request)])
+    .then(([bucket, key, filename]) => { // eslint-disable-line arrow-body-style
+      return getObjectStream(request, bucket, key)
         .then((data) => {
           const response = reply(data.stream);
 
@@ -180,8 +172,8 @@ function handler(request, reply) {
           if (disposition) {
             response.header('Content-Disposition', disposition);
           }
-        })
-  )
+        });
+    })
     .catch((err) => reply(err));
 }
 
