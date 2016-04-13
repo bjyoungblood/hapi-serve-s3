@@ -1,5 +1,8 @@
 # hapi-serve-s3
 
+[![Build Status](https://travis-ci.org/bjyoungblood/hapi-serve-s3.svg?branch=master)](https://travis-ci.org/bjyoungblood/hapi-serve-s3)
+[![Dependency Status](https://david-dm.org/bjyoungblood/hapi-serve-s3.svg)](https://david-dm.org/bjyoungblood/hapi-serve-s3)
+
 Easily serve files from an S3 bucket.
 
 ## Plugin Usage
