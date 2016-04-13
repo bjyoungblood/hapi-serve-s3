@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.0.1] - 2016-04-13
+### Changed
+- Removed unnecessary postinstall script
+
 ## [1.0.0] - 2016-04-13
 ### Changed
 - **MAJOR**: `key` and `filename` functions should return a Promise
@@ -13,3 +17,4 @@
 - Tests
 
 [1.0.0]: https://github.com/bjyoungblood/hapi-serve-s3/compare/v0.1.1...v1.0.0
+[1.0.1]: https://github.com/bjyoungblood/hapi-serve-s3/compare/v1.0.0...v1.0.1
