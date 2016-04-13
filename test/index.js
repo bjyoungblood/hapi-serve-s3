@@ -9,6 +9,8 @@ const expect = chai.expect;
 
 import hapiServeS3 from '../src';
 
+process.env.AWS_ACCESS_KEY_ID = 'FAKE';
+process.env.AWS_SECRET_ACCESS_KEY = 'FAKE';
 
 describe('hapi integration', () => {
   let server;
