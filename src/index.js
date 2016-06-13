@@ -112,12 +112,20 @@ function getBucket(request) {
 function getKey(request) {
   const { key } = request.route.settings.plugins.s3;
 
-  if (!key || _.isString(key)) {
+  if (_.isString(key)) {
     if (request.params.path) {
       return Promise.resolve(path.join(key, request.params.path));
     }
 
     return Promise.resolve(key);
+  }
+
+  if (!key) {
+    if (request.params.path) {
+      return Promise.resolve(request.params.path);
+    } else {
+      return Promise.resolve('');
+    }
   }
 
   return Promise.resolve(key(request));
