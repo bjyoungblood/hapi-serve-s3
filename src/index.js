@@ -1,8 +1,6 @@
 import { PassThrough } from 'stream';
 
-import _ from 'lodash';
 import AWS from 'aws-sdk';
-import Promise from 'bluebird';
 import Boom from 'boom';
 import Joi from 'joi';
 import path from 'path';
@@ -62,8 +60,8 @@ const routeOptionsSchema = Joi.object().keys({
 });
 
 function getObjectStream(request, bucket, key) {
-  if (_.isEmpty(bucket) || _.isEmpty(key)) {
-    return Promise.reject('bucket and key should not be empty');
+  if (!bucket || !key) {
+    return Promise.reject('bucket or key should not be empty');
   }
 
   const routeOptions = request.route.settings.plugins.s3;
@@ -102,7 +100,7 @@ function getObjectStream(request, bucket, key) {
 function getBucket(request) {
   const { bucket } = request.route.settings.plugins.s3;
 
-  if (_.isString(bucket)) {
+  if (typeof bucket === 'string') {
     return Promise.resolve(bucket);
   }
 
@@ -112,7 +110,7 @@ function getBucket(request) {
 function getKey(request) {
   const { key } = request.route.settings.plugins.s3;
 
-  if (_.isString(key)) {
+  if (typeof key === 'string') {
     if (request.params.path) {
       return Promise.resolve(path.join(key, request.params.path));
     }
