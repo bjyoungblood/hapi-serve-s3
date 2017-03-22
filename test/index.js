@@ -89,7 +89,7 @@ describe('hapi integration', () => {
     });
   });
 
-  before('define route without filename', () => { // eslint-disable-line arrow-body-style
+  before('define route without filename', () => {
     return server.route({
       method: 'GET',
       path: '/files2/{path*}',
@@ -107,10 +107,28 @@ describe('hapi integration', () => {
     });
   });
 
+  before('define route with mode `s3`', () => {
+    return server.route({
+      method: 'GET',
+      path: '/files3/{path*}',
+      handler: {
+        s3: {
+          s3Params: { // these options are just for testing purpose
+            s3ForcePathStyle: true,
+            endpoint: new AWS.Endpoint('http://localhost:4569')
+          },
+          mode: 's3',
+          bucket: 'test',
+          key: 'files2' // used as prefix
+        }
+      }
+    });
+  });
+
   describe('calling route where key, bucket and filename are functions', () => {
     let response;
 
-    before('call test route', () => { // eslint-disable-line arrow-body-style
+    before('call test route', () => {
       return server.inject({
         method: 'GET',
         url: '/files/1.pdf'
@@ -140,7 +158,7 @@ describe('hapi integration', () => {
   describe('test custom validation pre handler', () => {
     let response;
 
-    before('call test route', () => { // eslint-disable-line arrow-body-style
+    before('call test route', () => {
       return server.inject({
         method: 'GET',
         url: '/files/2.pdf'
@@ -158,7 +176,7 @@ describe('hapi integration', () => {
   describe('calling route where key and bucket are strings and filename is not defined', () => {
     let response;
 
-    before('call test route', () => { // eslint-disable-line arrow-body-style
+    before('call test route', () => {
       return server.inject({
         method: 'GET',
         url: '/files2/1.pdf'
@@ -174,6 +192,32 @@ describe('hapi integration', () => {
 
     it('should set the correct content-disposition headers', () => {
       expect(response.headers['content-disposition']).to.equal('attachment; filename="1.pdf"');
+    });
+
+    it('should respond with the content of the s3 file', () => {
+      expect(response.payload).to.equal('test\ntest\ntest\ntest\n');
+    });
+  });
+
+  describe('calling route where mode is `s3`', () => {
+    let response;
+
+    before('call test route', () => {
+      return server.inject({
+        method: 'GET',
+        url: '/files3/1.pdf'
+      })
+      .then((res) => {
+        response = res;
+      });
+    });
+
+    it('should respond with 200 (OK)', () => {
+      expect(response.statusCode).to.equal(200);
+    });
+
+    it('should set the correct content-disposition headers', () => {
+      expect(response.headers['content-disposition']).to.equal('attachment; filename="test-1.pdf"');
     });
 
     it('should respond with the content of the s3 file', () => {
