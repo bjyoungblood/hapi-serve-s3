@@ -23,17 +23,18 @@
   "homepage": "https://github.com/bjyoungblood/hapi-serve-s3#readme",
   "dependencies": {
     "aws-sdk": "^2.2.48",
-    "boom": "3.1.2",
+    "boom": "^4.3.0",
     "content-disposition": "^0.5.2",
-    "joi": "^8.0.5"
+    "joi": "^10.3.0"
   },
   "devDependencies": {
     "chai": "^3.5.0",
-    "eslint": "^2.5.3",
-    "eslint-config-airbnb": "^6.2.0",
-    "hapi": "^13.2.2",
-    "mocha": "^2.4.5",
-    "s3rver": "0.0.13"
+    "eslint": "^3.18.0",
+    "eslint-config-airbnb-base": "^11.1.1",
+    "eslint-plugin-import": "^2.2.0",
+    "hapi": "^16.1.0",
+    "mocha": "^3.2.0",
+    "s3rver": "^1.0.3"
   },
   "engines": {
     "node": "^6.9.0"
