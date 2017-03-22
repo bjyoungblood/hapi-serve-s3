@@ -108,12 +108,16 @@ serve.route({
 
 - `mode` *(Bool|String) default=false*
     - Specifies whether to include the Content-Disposition header.
-    - must be one of: `false`, `'attachment'`, `'inline'`
+    - must be one of: `false`, `'attachment'`, `'inline'`, `s3`
+    - if `s3` mode, before loading the file, a head request is performed, to
+      fetch the configured *Content-Disposition* header from S3. If one was found
+      this will be the returned *Content-Disposition* filename and type, otherwise
+      defaults to the S3 key's filename.
 - `filename` *([Function])*
     - If provided, the function will receive the request and it should return a promise
       that resolves the mapped `filename`. `filename` will then be added to the
-      Content-Disposition header. [@see Content-Dispostion](https://www.w3.org/Protocols/rfc2616/rfc2616-sec19.html#sec19.5.1)
-    - If mode is not `false` but no function is given `filename` will be set to the key's filename.
+      Content-Disposition header. [@see Content-Disposition](https://www.w3.org/Protocols/rfc2616/rfc2616-sec19.html#sec19.5.1)
+    - If mode is not `false` and no function is given `filename` will be set to the S3 key's filename.
 - `overrideContentTypes` *(Object) default={}*
     - If S3's reported content-type is a key, it will be replaced with the mapped value
       example: { "application/octet-stream" : "application/pdf" }

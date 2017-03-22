@@ -1,9 +1,18 @@
 {
-  "extends": "airbnb/base",
-  "parser": "babel-eslint",
+  "extends": "airbnb-base",
   "env": {
     "node": true,
     "es6": true,
     "mocha": true
+  },
+  "rules": {
+    "func-names": 0,
+    "padded-blocks": 0,
+    "arrow-body-style": 0,
+    "no-multi-assign": 0,
+    "comma-dangle": [ 2, "never" ],
+    "new-cap": [ 2, { "newIsCap": true, "capIsNew": false } ],
+    "arrow-parens": [ 2, "always" ],
+    "import/no-extraneous-dependencies": [ 2, { "devDependencies": true } ]
   }
 }

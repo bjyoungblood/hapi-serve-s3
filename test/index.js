@@ -1,13 +1,15 @@
-import S3rver from 's3rver';
-import AWS from 'aws-sdk';
-import path from 'path';
-import Boom from 'boom';
-import Hapi from 'hapi';
-import Joi from 'joi';
-import chai from 'chai';
-const expect = chai.expect;
+const Path = require('path');
 
-import hapiServeS3 from '../src';
+const S3rver = require('s3rver');
+const AWS = require('aws-sdk');
+const Boom = require('boom');
+const Hapi = require('hapi');
+const Joi = require('joi');
+const Chai = require('chai');
+
+const hapiServeS3 = require('../src');
+
+const expect = Chai.expect;
 
 process.env.AWS_ACCESS_KEY_ID = 'FAKE';
 process.env.AWS_SECRET_ACCESS_KEY = 'FAKE';
@@ -16,13 +18,14 @@ describe('hapi integration', () => {
   let server;
 
   before('create a mocked s3 server', (done) => {
-    new S3rver({
+    const params = {
       port: 4569,
       hostname: 'localhost',
       silent: true,
-      directory: path.join(__dirname, './fixtures/buckets'),
-    })
-    .run(done);
+      directory: Path.join(__dirname, './fixtures/buckets')
+    };
+
+    new S3rver(params).run(done);
   });
 
   before('load hapi server with serve-s3 plugin', () => {
@@ -31,11 +34,11 @@ describe('hapi integration', () => {
 
     return server.register({
       register: hapiServeS3,
-      options: { },
+      options: {}
     });
   });
 
-  before('define a test route', () => { // eslint-disable-line arrow-body-style
+  before('define a test route', () => {
     return server.route({
       method: 'GET',
       path: '/files/{filename}.pdf',
@@ -43,7 +46,7 @@ describe('hapi integration', () => {
         s3: {
           s3Params: { // these options are just for testing purpose
             s3ForcePathStyle: true,
-            endpoint: new AWS.Endpoint('http://localhost:4569'),
+            endpoint: new AWS.Endpoint('http://localhost:4569')
           },
           mode: 'attachment',
           bucket(request) {
@@ -60,9 +63,9 @@ describe('hapi integration', () => {
             return `${request.params.filename}.pdf`;
           },
           overrideContentTypes: {
-            'application/octet-stream': 'application/pdf',
-          },
-        },
+            'application/octet-stream': 'application/pdf'
+          }
+        }
       },
       config: {
         pre: [{
@@ -75,18 +78,18 @@ describe('hapi integration', () => {
             }
 
             return reply('test/files/1.pdf');
-          },
+          }
         }],
         validate: {
           params: {
-            filename: Joi.string().required(),
-          },
-        },
-      },
+            filename: Joi.string().required()
+          }
+        }
+      }
     });
   });
 
-  before('define route without filename', () => { // eslint-disable-line arrow-body-style
+  before('define route without filename', () => {
     return server.route({
       method: 'GET',
       path: '/files2/{path*}',
@@ -94,23 +97,41 @@ describe('hapi integration', () => {
         s3: {
           s3Params: { // these options are just for testing purpose
             s3ForcePathStyle: true,
-            endpoint: new AWS.Endpoint('http://localhost:4569'),
+            endpoint: new AWS.Endpoint('http://localhost:4569')
           },
           mode: 'attachment',
           bucket: 'test',
-          key: 'files2', // used as prefix
-        },
-      },
+          key: 'files2' // used as prefix
+        }
+      }
+    });
+  });
+
+  before('define route with mode `s3`', () => {
+    return server.route({
+      method: 'GET',
+      path: '/files3/{path*}',
+      handler: {
+        s3: {
+          s3Params: { // these options are just for testing purpose
+            s3ForcePathStyle: true,
+            endpoint: new AWS.Endpoint('http://localhost:4569')
+          },
+          mode: 's3',
+          bucket: 'test',
+          key: 'files2' // used as prefix
+        }
+      }
     });
   });
 
   describe('calling route where key, bucket and filename are functions', () => {
     let response;
 
-    before('call test route', () => { // eslint-disable-line arrow-body-style
+    before('call test route', () => {
       return server.inject({
         method: 'GET',
-        url: '/files/1.pdf',
+        url: '/files/1.pdf'
       })
       .then((res) => {
         response = res;
@@ -126,7 +147,7 @@ describe('hapi integration', () => {
     });
 
     it('should set the correct content-disposition headers', () => {
-      expect(response.headers['content-disposition']).to.equal('attachment; filename=1.pdf');
+      expect(response.headers['content-disposition']).to.equal('attachment; filename="1.pdf"');
     });
 
     it('should respond with the content of the s3 file', () => {
@@ -137,10 +158,10 @@ describe('hapi integration', () => {
   describe('test custom validation pre handler', () => {
     let response;
 
-    before('call test route', () => { // eslint-disable-line arrow-body-style
+    before('call test route', () => {
       return server.inject({
         method: 'GET',
-        url: '/files/2.pdf',
+        url: '/files/2.pdf'
       })
       .then((res) => {
         response = res;
@@ -155,10 +176,10 @@ describe('hapi integration', () => {
   describe('calling route where key and bucket are strings and filename is not defined', () => {
     let response;
 
-    before('call test route', () => { // eslint-disable-line arrow-body-style
+    before('call test route', () => {
       return server.inject({
         method: 'GET',
-        url: '/files2/1.pdf',
+        url: '/files2/1.pdf'
       })
       .then((res) => {
         response = res;
@@ -170,7 +191,33 @@ describe('hapi integration', () => {
     });
 
     it('should set the correct content-disposition headers', () => {
-      expect(response.headers['content-disposition']).to.equal('attachment; filename=1.pdf');
+      expect(response.headers['content-disposition']).to.equal('attachment; filename="1.pdf"');
+    });
+
+    it('should respond with the content of the s3 file', () => {
+      expect(response.payload).to.equal('test\ntest\ntest\ntest\n');
+    });
+  });
+
+  describe('calling route where mode is `s3`', () => {
+    let response;
+
+    before('call test route', () => {
+      return server.inject({
+        method: 'GET',
+        url: '/files3/1.pdf'
+      })
+      .then((res) => {
+        response = res;
+      });
+    });
+
+    it('should respond with 200 (OK)', () => {
+      expect(response.statusCode).to.equal(200);
+    });
+
+    it('should set the correct content-disposition headers', () => {
+      expect(response.headers['content-disposition']).to.equal('attachment; filename="test-1.pdf"');
     });
 
     it('should respond with the content of the s3 file', () => {
