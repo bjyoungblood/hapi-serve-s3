@@ -129,7 +129,7 @@ describe('hapi integration', () => {
     });
 
     it('should set the correct content-disposition headers', () => {
-      expect(response.headers['content-disposition']).to.equal('attachment; filename=1.pdf');
+      expect(response.headers['content-disposition']).to.equal('attachment; filename="1.pdf"');
     });
 
     it('should respond with the content of the s3 file', () => {
@@ -173,7 +173,7 @@ describe('hapi integration', () => {
     });
 
     it('should set the correct content-disposition headers', () => {
-      expect(response.headers['content-disposition']).to.equal('attachment; filename=1.pdf');
+      expect(response.headers['content-disposition']).to.equal('attachment; filename="1.pdf"');
     });
 
     it('should respond with the content of the s3 file', () => {
