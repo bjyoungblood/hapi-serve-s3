@@ -29,7 +29,7 @@ const routeOptionsSchema = Joi.object().keys({
   region: Joi.string().optional().default('us-east-1'),
 
   // If a string is provided it will be used as bucket name.
-  // If a function is proviced, it will receive the request and should return a promise
+  // If a function is provided, it will receive the request and should return a promise
   // that resolves the mapped `bucket`.
   bucket: Joi.alternatives().try(
     Joi.string(),
