@@ -23,7 +23,7 @@ internals.routeOptionsSchema = Joi.object()
     filename: Joi.alternatives().when('mode', {
       is: Joi.valid(false, 's3'),
       then: Joi.forbidden(),
-      otherwise: Joi.func().optional(),
+      otherwise: Joi.func().optional()
     }),
 
     // If S3's reported content-type is key, replace it with value
@@ -59,10 +59,10 @@ internals.routeOptionsSchema = Joi.object()
     secretAccessKey: Joi.string().optional().default(process.env.AWS_SECRET_ACCESS_KEY),
 
     // additional aws s3 options
-    s3Params: Joi.object().optional().default({}),
+    s3Params: Joi.object().optional().default({})
   })
   .options({
-    allowUnknown: false,
+    allowUnknown: false
   });
 
 
@@ -112,7 +112,7 @@ internals.getObjectStream = function (request, bucket, key) {
 
       return resolve({
         headers,
-        stream: passthrough,
+        stream: passthrough
       });
     });
 
@@ -254,7 +254,7 @@ internals.getContentDisposition = function (request, filename, objectMetaData) {
   }
 
   let type;
-  let name = undefined;
+  let name;
 
   if (mode === 's3') {
     type = objectMetaData.dispositionType;
@@ -335,8 +335,8 @@ internals.s3Handler = function (route, routeOptions) {
 internals.s3Handler.defaults = {
   payload: {
     output: 'stream',
-    parse: false,
-  },
+    parse: false
+  }
 };
 
 
@@ -353,5 +353,5 @@ const register = module.exports = function (server, options, next) {
 register.attributes = {
   name: Pkg.name,
   version: Pkg.version,
-  multiple: false,
+  multiple: false
 };

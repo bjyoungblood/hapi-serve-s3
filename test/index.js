@@ -34,11 +34,11 @@ describe('hapi integration', () => {
 
     return server.register({
       register: hapiServeS3,
-      options: { },
+      options: {}
     });
   });
 
-  before('define a test route', () => { // eslint-disable-line arrow-body-style
+  before('define a test route', () => {
     return server.route({
       method: 'GET',
       path: '/files/{filename}.pdf',
@@ -46,7 +46,7 @@ describe('hapi integration', () => {
         s3: {
           s3Params: { // these options are just for testing purpose
             s3ForcePathStyle: true,
-            endpoint: new AWS.Endpoint('http://localhost:4569'),
+            endpoint: new AWS.Endpoint('http://localhost:4569')
           },
           mode: 'attachment',
           bucket(request) {
@@ -63,9 +63,9 @@ describe('hapi integration', () => {
             return `${request.params.filename}.pdf`;
           },
           overrideContentTypes: {
-            'application/octet-stream': 'application/pdf',
-          },
-        },
+            'application/octet-stream': 'application/pdf'
+          }
+        }
       },
       config: {
         pre: [{
@@ -78,14 +78,14 @@ describe('hapi integration', () => {
             }
 
             return reply('test/files/1.pdf');
-          },
+          }
         }],
         validate: {
           params: {
-            filename: Joi.string().required(),
-          },
-        },
-      },
+            filename: Joi.string().required()
+          }
+        }
+      }
     });
   });
 
@@ -97,13 +97,13 @@ describe('hapi integration', () => {
         s3: {
           s3Params: { // these options are just for testing purpose
             s3ForcePathStyle: true,
-            endpoint: new AWS.Endpoint('http://localhost:4569'),
+            endpoint: new AWS.Endpoint('http://localhost:4569')
           },
           mode: 'attachment',
           bucket: 'test',
-          key: 'files2', // used as prefix
-        },
-      },
+          key: 'files2' // used as prefix
+        }
+      }
     });
   });
 
@@ -113,7 +113,7 @@ describe('hapi integration', () => {
     before('call test route', () => { // eslint-disable-line arrow-body-style
       return server.inject({
         method: 'GET',
-        url: '/files/1.pdf',
+        url: '/files/1.pdf'
       })
       .then((res) => {
         response = res;
@@ -143,7 +143,7 @@ describe('hapi integration', () => {
     before('call test route', () => { // eslint-disable-line arrow-body-style
       return server.inject({
         method: 'GET',
-        url: '/files/2.pdf',
+        url: '/files/2.pdf'
       })
       .then((res) => {
         response = res;
@@ -161,7 +161,7 @@ describe('hapi integration', () => {
     before('call test route', () => { // eslint-disable-line arrow-body-style
       return server.inject({
         method: 'GET',
-        url: '/files2/1.pdf',
+        url: '/files2/1.pdf'
       })
       .then((res) => {
         response = res;
