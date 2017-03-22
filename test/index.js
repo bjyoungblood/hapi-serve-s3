@@ -1,13 +1,15 @@
-import S3rver from 's3rver';
-import AWS from 'aws-sdk';
-import path from 'path';
-import Boom from 'boom';
-import Hapi from 'hapi';
-import Joi from 'joi';
-import chai from 'chai';
-const expect = chai.expect;
+const Path = require('path');
 
-import hapiServeS3 from '../src';
+const S3rver = require('s3rver');
+const AWS = require('aws-sdk');
+const Boom = require('boom');
+const Hapi = require('hapi');
+const Joi = require('joi');
+const Chai = require('chai');
+
+const hapiServeS3 = require('../src');
+
+const expect = Chai.expect;
 
 process.env.AWS_ACCESS_KEY_ID = 'FAKE';
 process.env.AWS_SECRET_ACCESS_KEY = 'FAKE';
@@ -16,13 +18,14 @@ describe('hapi integration', () => {
   let server;
 
   before('create a mocked s3 server', (done) => {
-    new S3rver({
+    const params = {
       port: 4569,
       hostname: 'localhost',
       silent: true,
-      directory: path.join(__dirname, './fixtures/buckets'),
-    })
-    .run(done);
+      directory: Path.join(__dirname, './fixtures/buckets')
+    };
+
+    new S3rver(params).run(done);
   });
 
   before('load hapi server with serve-s3 plugin', () => {

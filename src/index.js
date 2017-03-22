@@ -73,13 +73,16 @@ internals.getS3Client = function (request) {
 
   const routeOptions = request.route.settings.plugins.s3;
 
-  return new AWS.S3({
-    accessKeyId: routeOptions.accessKeyId,
-    secretAccessKey: routeOptions.secretAccessKey,
-    region: routeOptions.region,
-    sslEnabled: routeOptions.sslEnabled,
-    ...routeOptions.s3Params,
-  });
+  return new AWS.S3(Object.assign(
+    {},
+    {
+      accessKeyId: routeOptions.accessKeyId,
+      secretAccessKey: routeOptions.secretAccessKey,
+      region: routeOptions.region,
+      sslEnabled: routeOptions.sslEnabled
+    },
+    routeOptions.s3Params
+  ));
 };
 
 
