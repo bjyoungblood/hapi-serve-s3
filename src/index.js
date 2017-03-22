@@ -4,19 +4,20 @@ import AWS from 'aws-sdk';
 import Boom from 'boom';
 import Joi from 'joi';
 import path from 'path';
+import ContentDisposition from 'content-disposition';
 
 import pkg from '../package.json';
 
 const routeOptionsSchema = Joi.object().keys({
   // Specifies whether to include the Content-Disposition header.
-  mode: Joi.valid(false, 'attachment', 'inline').default(false),
+  mode: Joi.valid(false, 'attachment', 'inline', 's3').default(false),
 
   // If provided, the function will receive the request and it should return a promise
   // that resolves the mapped `filename`. `filename` will then be added to the
   // Content-Disposition header. If mode is not false but no function is given `filename`
   // will be set to the key's filename
   filename: Joi.alternatives().when('mode', {
-    is: false,
+    is: Joi.valid(false, 's3'),
     then: Joi.forbidden(),
     otherwise: Joi.func().optional(),
   }),
@@ -59,20 +60,24 @@ const routeOptionsSchema = Joi.object().keys({
   allowUnknown: false,
 });
 
-function getObjectStream(request, bucket, key) {
-  if (!bucket || !key) {
-    return Promise.reject('bucket or key should not be empty');
-  }
-
+function getS3Client(request) {
   const routeOptions = request.route.settings.plugins.s3;
 
-  const s3 = new AWS.S3({
+  return new AWS.S3({
     accessKeyId: routeOptions.accessKeyId,
     secretAccessKey: routeOptions.secretAccessKey,
     region: routeOptions.region,
     sslEnabled: routeOptions.sslEnabled,
     ...routeOptions.s3Params,
   });
+}
+
+function getObjectStream(request, bucket, key) {
+  if (!bucket || !key) {
+    return Promise.reject('bucket or key should not be empty');
+  }
+
+  const s3 = getS3Client(request);
 
   return new Promise((resolve, reject) => {
     const req = s3.getObject({ Bucket: bucket, Key: key });
@@ -121,16 +126,53 @@ function getKey(request) {
   if (!key) {
     if (request.params.path) {
       return Promise.resolve(request.params.path);
-    } else {
-      return Promise.resolve('');
     }
+
+    return Promise.resolve('');
   }
 
   return Promise.resolve(key(request));
 }
 
-function getFilename(request, key) {
-  const { filename } = request.route.settings.plugins.s3;
+function getContentDispositionFilename(contentDisposition) {
+  if (!contentDisposition) {
+    return null;
+  }
+
+  const disposition = ContentDisposition.parse(contentDisposition);
+
+  if (!disposition.parameters || !disposition.parameters.filename) {
+    return null;
+  }
+
+  return disposition.parameters.filename;
+}
+
+function getFilename(request, bucket, key) {
+  const { mode, filename } = request.route.settings.plugins.s3;
+
+  // In s3 mode we load the file's meta data and check if a Content-Disposition header
+  // was set with a filename.
+  if (mode === 's3') {
+    const s3 = getS3Client(request);
+
+    return new Promise((resolve, reject) => {
+      s3.headObject({ Bucket: bucket, Key: key }, (err, data) => {
+        if (err) {
+          return reject(err);
+        }
+
+        const dispositionFilename = getContentDispositionFilename(data.ContentDisposition);
+
+        if (!dispositionFilename) {
+          return resolve(path.basename(key));
+        }
+
+        return resolve(dispositionFilename);
+      });
+    });
+  }
+
   if (!filename) {
     return Promise.resolve(path.basename(key));
   }
@@ -166,7 +208,7 @@ function getContentDisposition(request, filename) {
 function handler(request, reply) {
   return Promise.all([getBucket(request), getKey(request)])
     .then(([bucket, key]) => { // eslint-disable-line arrow-body-style
-      return getFilename(request, key)
+      return getFilename(request, bucket, key)
         .then((filename) => [bucket, key, filename]);
     })
     .then(([bucket, key, filename]) => { // eslint-disable-line arrow-body-style
