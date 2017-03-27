@@ -1,5 +1,15 @@
+# run on container based infrastructure
+sudo: false
+
 language: node_js
 node_js:
     - "stable"
-    - "5"
-    - "4"
+    - "6"
+
+cache:
+  directories:
+    - ./node_modules
+
+script:
+  - npm run eslint
+  - npm test
