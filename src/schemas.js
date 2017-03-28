@@ -60,6 +60,9 @@ Schemas.routeOptionsSchema = Joi.object()
       )
       .optional(),
 
+    // If set, randomizes the S3 Key (basename) for POST request
+    randomPostKeys: Joi.boolean().optional(),
+
     // Specifies whether to include the Content-Disposition header.
     // - if `false`: no content-disposition header will be set
     // - if `auto`:

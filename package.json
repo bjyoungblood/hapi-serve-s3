@@ -22,12 +22,13 @@
   },
   "homepage": "https://github.com/bjyoungblood/hapi-serve-s3#readme",
   "dependencies": {
-    "aws-sdk": "^2.32.0",
-    "boom": "^4.3.0",
+    "aws-sdk": "^2.33.0",
+    "boom": "^4.3.1",
     "content": "^3.0.3",
     "content-disposition": "^0.5.2",
     "hoek": "^4.1.0",
-    "joi": "^10.3.1"
+    "joi": "^10.3.1",
+    "uuid": "^3.0.1"
   },
   "devDependencies": {
     "eslint": "^3.18.0",
