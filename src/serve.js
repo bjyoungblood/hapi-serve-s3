@@ -66,7 +66,7 @@ Serve.handler = function (request, reply) {
       ]);
   };
 
-  // load s3 object meta data if necessary
+  // load s3 object meta data
   const getObjectMetaData = function ([bucket, key]) {
     return Helpers.getObjectMetaData(request, bucket, key)
       .then((objectMetaData) => [bucket, key, objectMetaData]);
@@ -119,26 +119,13 @@ Serve.handler = function (request, reply) {
     return response;
   };
 
-  const replyWithError = function (err) {
-    const { onResponse } = request.route.settings.plugins.s3;
-    const error = Boom.wrap(err);
-
-    // delegate reply if configured
-    if (onResponse) {
-      return onResponse(error, null, request, reply);
-    }
-
-    // default reply strategy
-    return reply(error);
-  };
-
   return Promise.resolve()
     .then(getBucketAndKey)
     .then(getObjectMetaData)
     .then(getContentDispositionAndType)
     .then(getObjectStream)
     .then(replyWithStream)
-    .catch(replyWithError);
+    .catch(Helpers.replyWithError(request, reply));
 };
 
 

@@ -168,7 +168,7 @@ Helpers.hasMatch = function (allowed, item) {
     const val = allowed[i];
 
     if ((val instanceof RegExp && val.test(item)) ||
-        (typeof val === 'string' && val === item)) {
+        (val === item)) {
 
       return true;
     }
@@ -283,4 +283,29 @@ Helpers.getContentDisposition = function (request, bucket, key, options = {}) {
 
       return ContentDisposition(fname, { type });
     });
+};
+
+
+/**
+ * Common Error Handling for the S3 Handler
+ *
+ * @param {Request} request
+ * @param {Reply} reply
+ * @returns {ErrorHandler}
+ */
+Helpers.replyWithError = function (request, reply) {
+
+  return function (err) {
+
+    const { onResponse } = request.route.settings.plugins.s3;
+    const error = Boom.wrap(err);
+
+    // delegate reply if configured
+    if (onResponse) {
+      return onResponse(error, null, request, reply);
+    }
+
+    // default reply strategy
+    return reply(error);
+  };
 };

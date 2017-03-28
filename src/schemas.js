@@ -65,6 +65,8 @@ Schemas.routeOptionsSchema = Joi.object()
     //   - for 'GET':
     //     - try to load header from S3 directly
     //     - try 'attachment'
+    //   - for 'POST'
+    //     - try 'attachement'
     // - if `attachment`: content-disposition will always be set to 'attachment'
     // - if `inline`: content-disposition will always be set to 'inline'
     // - if `<object>`: key=['get', 'post', ...] value=<mode>
@@ -87,6 +89,17 @@ Schemas.routeOptionsSchema = Joi.object()
     // If S3's reported content-type is key, replace it with value
     // example: { "application/octet-stream" : "application/pdf" }
     overrideContentTypes: Joi.object().optional().default({}),
+
+    // for `POST` requests, check if the content type is allowed to be uploaded
+    // - if `undefined` is part of the list, also allow if no content type was found / will be set
+    allowedContentTypes: Joi.array()
+      .items(
+        Joi.object().type(RegExp),
+        Joi.string()
+      )
+      .sparse(true) // allow undefined
+      .optional()
+      .description('list of allowed content-types'),
 
     // Set the content-type header to the given value.
     // - if string: use as is

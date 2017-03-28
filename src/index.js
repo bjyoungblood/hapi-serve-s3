@@ -2,6 +2,7 @@ const Joi = require('joi');
 
 const Schemas = require('./schemas');
 const Serve = require('./serve');
+const Upload = require('./upload');
 const Pkg = require('../package.json');
 
 const internals = {};
@@ -11,7 +12,8 @@ const internals = {};
  * Handler Lookup based on `route.method`
  */
 internals.handlers = {
-  get: Serve.handler
+  get: Serve.handler,
+  post: Upload.handler
 };
 
 
