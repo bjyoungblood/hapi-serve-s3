@@ -1,5 +1,6 @@
 const Joi = require('joi');
 
+const Delete = require('./delete');
 const Schemas = require('./schemas');
 const Serve = require('./serve');
 const Upload = require('./upload');
@@ -13,7 +14,8 @@ const internals = {};
  */
 internals.handlers = {
   get: Serve.handler,
-  post: Upload.handler
+  post: Upload.handler,
+  delete: Delete.handler
 };
 
 
