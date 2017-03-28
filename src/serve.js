@@ -99,7 +99,8 @@ Serve.handler = function (request, reply) {
         bucket,
         key,
         contentType: type,
-        contentDisposition: disposition
+        contentDisposition: disposition,
+        defaultStatusCode: 200
       };
 
       return onResponse(/* error */null, /* res */data.stream, request, reply, options);

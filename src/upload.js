@@ -13,7 +13,7 @@ const Upload = exports;
 
 
 /**
- * resolves with a stream of the S3 Object
+ * uploads the given file and resolves with the S3 response data
  */
 internals.uploadStream = function (request, bucket, key, file, params = {}) {
 
@@ -60,13 +60,10 @@ Upload.handler = function (request, reply) {
 
   // resolve `bucket` and `key`
   const getBucketAndKey = function (file) {
-    // default to the files `name`
-    const defaultKey = file.key;
-
     return Promise
       .all([
         Helpers.getBucket(request),
-        Helpers.getKey(request, { defaultKey })
+        Helpers.getKey(request, { fileKey: file.key })
       ])
       .then(([bucket, key]) => [file, bucket, key]);
   };
@@ -183,7 +180,8 @@ Upload.handler = function (request, reply) {
           key,
           contentType: type,
           contentDisposition: disposition
-        }))
+        })),
+        defaultStatusCode: 201
       };
 
       return onResponse(null, /* res*/payload, request, reply, options);

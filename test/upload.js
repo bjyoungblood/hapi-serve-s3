@@ -242,11 +242,83 @@ describe('[integration/upload] "POST" spec', function () {
     });
   });
 
-  describe('[onResponse]', function () {
+  describe('[mode=auto][key as string]', function () {
     before('define route', function () {
       return server.route({
         method: ['GET', 'POST'],
         path: '/files2/{path?}',
+        handler: {
+          s3: {
+            s3Params: { // these options are just for testing purpose
+              s3ForcePathStyle: true,
+              endpoint: new AWS.Endpoint('http://localhost:4569')
+            },
+            bucket: 'test',
+            key: 'files3'   // used as prefix
+          }
+        }
+      });
+    });
+
+    describe('valid request', function () {
+      const content = Buffer.from('123\nTest PDF\nxxx');
+      const files = [
+        { name: 'test', buf: content, filename: 'test-NF.pdf' }
+      ];
+
+      let response;
+      let formData;
+      let fileResponses;
+
+      before('get form data', function () {
+        return Helpers.getFormData(files)
+          .then((data) => {
+            formData = data;
+          });
+      });
+
+      before('upload files', function () {
+        const { payload, form } = formData;
+
+        const params = {
+          method: 'POST',
+          url: '/files2/',
+          headers: form.getHeaders(),
+          payload
+        };
+
+        return server.inject(params)
+          .then((res) => {
+            response = res;
+          });
+      });
+
+      before('reload files', function () {
+        return Helpers.reloadFiles(files, { server, prefix: '/files2/' })
+          .then((responses) => {
+            fileResponses = responses;
+          });
+      });
+
+      after('cleanup files', function () {
+        RimRaf.sync(Path.resolve(__dirname, './fixtures/buckets/test/files3'));
+      });
+
+      it('should respond with 201 (Created)', function () {
+        expect(response.statusCode).toEqual(201);
+      });
+
+      it('should be possible to GET the file afterwards', function () {
+        expect(fileResponses.test.statusCode).toEqual(200);
+      });
+    });
+  });
+
+  describe('[onResponse]', function () {
+    before('define route', function () {
+      return server.route({
+        method: ['GET', 'POST'],
+        path: '/files3/{path?}',
         handler: {
           s3: {
             s3Params: { // these options are just for testing purpose
@@ -296,7 +368,7 @@ describe('[integration/upload] "POST" spec', function () {
 
         const params = {
           method: 'POST',
-          url: '/files2/',
+          url: '/files3/',
           headers: form.getHeaders(),
           payload
         };
@@ -331,7 +403,7 @@ describe('[integration/upload] "POST" spec', function () {
       before('upload invalid content', function () {
         const params = {
           method: 'POST',
-          url: '/files2/',
+          url: '/files3/',
           payload: { not: 'supported' }
         };
 

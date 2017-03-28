@@ -47,6 +47,7 @@ Schemas.routeOptionsSchema = Joi.object()
     // If a string is provided, then it will be used to look up the key:
     //   - if the route contains a parameter "path", the key will be treated as a prefix
     //   - otherwise, the key will be treated as the literal S3 key
+    //   - for "POST": always used as prefix
     // If a function is provided, it should return or resolve the `key`.
     // - if function: key(request) -> Promise|String
     // If not given try:

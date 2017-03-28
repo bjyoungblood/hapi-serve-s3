@@ -85,6 +85,10 @@ Helpers.getKey = function (request, options = {}) {
       return Promise.resolve(Path.join(key, request.params.path));
     }
 
+    if (options.fileKey) {
+      return Promise.resolve(Path.join(key, options.fileKey));
+    }
+
     return Promise.resolve(key);
   }
 
@@ -96,8 +100,8 @@ Helpers.getKey = function (request, options = {}) {
     return Promise.resolve(request.params.path);
   }
 
-  if (options.defaultKey) {
-    return options.defaultKey;
+  if (options.fileKey) {
+    return Promise.resolve(options.fileKey);
   }
 
   return Promise.reject(Helpers.BadImplementationError('cannot resolve "key"'));
