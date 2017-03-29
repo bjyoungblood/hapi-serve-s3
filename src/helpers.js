@@ -4,6 +4,7 @@ const AWS = require('aws-sdk');
 const Boom = require('boom');
 const ContentDisposition = require('content-disposition');
 const Hoek = require('hoek');
+const Uuid = require('uuid');
 
 const Helpers = exports;
 const internals = {};
@@ -71,6 +72,30 @@ Helpers.getBucket = function (request) {
 
 
 /**
+ * returns a randomized key if test is truthy
+ *
+ * @param {Boolean} test
+ * @param {String} key
+ * @return {String}
+ */
+internals.randomizeKey = function (test, key) {
+
+  if (!test) {
+    return key;
+  }
+
+  const ext = Path.extname(key);
+  const dirname = Path.dirname(key);
+
+  const buf = new Buffer(32);
+  Uuid.v4(null, buf);
+  const randomKey = Hoek.base64urlEncode(buf);
+
+  return Path.join(dirname, `${randomKey}${ext}`);
+};
+
+
+/**
  * resolves with the S3 `Key`
  *
  * @param {Object} request - Hapi request Object
@@ -79,32 +104,27 @@ Helpers.getBucket = function (request) {
 Helpers.getKey = function (request, options = {}) {
 
   const { key } = request.route.settings.plugins.s3;
+  const { fileKey, randomize } = options;
 
-  if (typeof key === 'string') {
-    if (request.params.path) {
-      return Promise.resolve(Path.join(key, request.params.path));
+  const getKey = function () {
+    if (typeof key === 'function') {
+      return Promise.resolve(key(request));
     }
 
-    if (options.fileKey) {
-      return Promise.resolve(Path.join(key, options.fileKey));
+    const prefix = (typeof key === 'string') ? key : '';
+    const path = request.params.path || '';
+    const postfix = fileKey || '';
+
+    if (!prefix && !path && !postfix) {
+      return Promise.reject(Helpers.BadImplementationError('cannot resolve "key"'));
     }
 
-    return Promise.resolve(key);
-  }
+    return Path.join(prefix, path, postfix);
+  };
 
-  if (typeof key === 'function') {
-    return Promise.resolve(key(request));
-  }
-
-  if (!key && request.params.path) {
-    return Promise.resolve(request.params.path);
-  }
-
-  if (options.fileKey) {
-    return Promise.resolve(options.fileKey);
-  }
-
-  return Promise.reject(Helpers.BadImplementationError('cannot resolve "key"'));
+  return Promise.resolve()
+    .then(getKey)
+    .then((key) => internals.randomizeKey(randomize, key));
 };
 
 

@@ -334,7 +334,7 @@ describe('[integration/serve] "GET" spec', function () {
   });
 
   describe('[onResponse]', function () {
-    before('define route with mode `false`', function () {
+    before('define route', function () {
       return server.route({
         method: 'GET',
         path: '/files5/{path*}',
@@ -344,7 +344,6 @@ describe('[integration/serve] "GET" spec', function () {
               s3ForcePathStyle: true,
               endpoint: new AWS.Endpoint('http://localhost:4569')
             },
-            mode: 'auto',
             bucket: 'test',
             key: 'files2',
             onResponse(err, res, request, reply, options) {
@@ -432,6 +431,49 @@ describe('[integration/serve] "GET" spec', function () {
         const payload = JSON.parse(response.payload);
 
         expect(payload).toEqual({ message: 'there was an error' });
+      });
+    });
+  });
+
+  describe('multi-level paths', function () {
+    before('define route', function () {
+      return server.route({
+        method: 'GET',
+        path: '/files6/{path*}',
+        handler: {
+          s3: {
+            s3Params: {
+              s3ForcePathStyle: true,
+              endpoint: new AWS.Endpoint('http://localhost:4569')
+            },
+            bucket: 'test',
+            key: 'files2' // prefix
+          }
+        }
+      });
+    });
+
+    describe('valid request', function () {
+      let response;
+
+      before('call test route', function () {
+        const params = {
+          method: 'GET',
+          url: '/files6/deeper/3.pdf'
+        };
+
+        return server.inject(params)
+          .then((res) => {
+            response = res;
+          });
+      });
+
+      it('should respond with HTTP 200 (OK)', function () {
+        expect(response.statusCode).toEqual(200);
+      });
+
+      it('should respond with the correct file', function () {
+        expect(response.payload).toEqual('test3\ntest3\ntest3\ntest3\n');
       });
     });
   });

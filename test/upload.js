@@ -428,4 +428,180 @@ describe('[integration/upload] "POST" spec', function () {
       });
     });
   });
+
+  describe('[randomPostKeys]', function () {
+    before('define route', function () {
+      return server.route({
+        method: ['GET', 'POST'],
+        path: '/files4/{path?}',
+        handler: {
+          s3: {
+            s3Params: { // these options are just for testing purpose
+              s3ForcePathStyle: true,
+              endpoint: new AWS.Endpoint('http://localhost:4569')
+            },
+            bucket: 'test',
+            key: 'prefixxxed',
+            randomPostKeys: true
+          }
+        }
+      });
+    });
+
+    describe('valid request', function () {
+      const content = Buffer.from('123\nTest PDF\nxxx');
+      const files = [
+        { name: 'file.pdf', buf: content, filename: 'test-NF.pdf' }
+      ];
+
+      let response;
+      let formData;
+
+      before('get form data', function () {
+        return Helpers.getFormData(files)
+          .then((data) => {
+            formData = data;
+          });
+      });
+
+      before('upload file via form data', function () {
+        const { payload, form } = formData;
+
+        const params = {
+          method: 'POST',
+          url: '/files4/',
+          headers: form.getHeaders(),
+          payload
+        };
+
+        return server.inject(params)
+          .then((res) => {
+            response = res;
+          });
+      });
+
+      after('cleanup files', function () {
+        RimRaf.sync(Path.resolve(__dirname, './fixtures/buckets/test/prefixxxed'));
+      });
+
+      it('should with HTTP 201 (Created)', function () {
+        expect(response.statusCode).toEqual(201);
+      });
+
+      it('should respond with the randomized key', function () {
+        const payload = JSON.parse(response.payload);
+
+        expect(payload['file.pdf']).toExist();
+        expect(payload['file.pdf'].Key).toExist();
+        expect(payload['file.pdf'].Key).toNotEqual('file.pdf');
+        expect(payload['file.pdf'].Key.length).toBeGreaterThan(15);
+      });
+
+      it('should preserve the files extension and prefix (dirname)', function () {
+        const payload = JSON.parse(response.payload);
+
+        expect(payload['file.pdf'].Key).toMatch(/^prefixxxed\/.*\.pdf$/);
+      });
+    });
+  });
+
+  describe('multi-level paths with `key`', function () {
+    before('define route', function () {
+      return server.route({
+        method: ['GET', 'POST', 'DELETE'],
+        path: '/files5/{path*}',
+        handler: {
+          s3: {
+            s3Params: {
+              s3ForcePathStyle: true,
+              endpoint: new AWS.Endpoint('http://localhost:4569')
+            },
+            bucket: 'test',
+            key: 'files2' // prefix
+          }
+        }
+      });
+    });
+
+    describe('valid request', function () {
+      const content = Buffer.from('123\nTest PDF\nxxx');
+      const files = [
+        { name: 'test-file.pdf', buf: content, filename: 'test-NF.pdf' }
+      ];
+
+      let response;
+      let formData;
+      let getResponse;
+      let deleteResponse;
+
+      before('get form data', function () {
+        return Helpers.getFormData(files)
+          .then((data) => {
+            formData = data;
+          });
+      });
+
+      before('upload file via form data', function () {
+        const { payload, form } = formData;
+
+        const params = {
+          method: 'POST',
+          url: '/files5/deeper/and/deeper',
+          headers: form.getHeaders(),
+          payload
+        };
+
+        return server.inject(params)
+          .then((res) => {
+            response = res;
+          });
+      });
+
+      before('reload file', function () {
+        const params = {
+          method: 'GET',
+          url: '/files5/deeper/and/deeper/test-file.pdf'
+        };
+
+        return server.inject(params)
+          .then((resp) => {
+            getResponse = resp;
+          });
+      });
+
+      before('delete file', function () {
+        const params = {
+          method: 'DELETE',
+          url: '/files5/deeper/and/deeper/test-file.pdf'
+        };
+
+        return server.inject(params)
+          .then((resp) => {
+            deleteResponse = resp;
+          });
+      });
+
+      after('cleanup files', function () {
+        RimRaf.sync(Path.resolve(__dirname, './fixtures/buckets/test/files2/deeper/and'));
+      });
+
+      it('should with HTTP 201 (Created)', function () {
+        expect(response.statusCode).toEqual(201);
+      });
+
+      it('should respond with the nested key: `key/{path*}/filename`', function () {
+        const payload = JSON.parse(response.payload);
+
+        expect(payload['test-file.pdf'].Key).toEqual('files2/deeper/and/deeper/test-file.pdf');
+      });
+
+      it('should be possible to load the file', function () {
+        expect(getResponse.statusCode).toEqual(200);
+      });
+
+      it('should be possible to delete the file', function () {
+        expect(deleteResponse.statusCode).toEqual(204);
+      });
+    });
+  });
 });

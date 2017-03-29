@@ -60,10 +60,12 @@ Upload.handler = function (request, reply) {
 
   // resolve `bucket` and `key`
   const getBucketAndKey = function (file) {
+    const { randomPostKeys: randomize } = request.route.settings.plugins.s3;
+
     return Promise
       .all([
         Helpers.getBucket(request),
-        Helpers.getKey(request, { fileKey: file.key })
+        Helpers.getKey(request, { fileKey: file.key, randomize })
       ])
       .then(([bucket, key]) => [file, bucket, key]);
   };
@@ -203,6 +205,7 @@ Upload.handler = function (request, reply) {
 Upload.handler.defaults = {
   payload: {
     output: 'stream',
-    parse: true
+    parse: true,
+    maxBytes: 1024 * 1024 * 10 // 10MB
   }
 };
