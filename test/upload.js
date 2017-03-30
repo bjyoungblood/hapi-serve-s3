@@ -129,6 +129,14 @@ describe('[integration/upload] "POST" spec', function () {
         });
       });
 
+      it('should extend the S3 Data with ContentDisposition and ContentType', function () {
+        const payload = JSON.parse(response.payload);
+
+        expect(payload).toInclude({
+          test: { ContentType: 'application/pdf', ContentDisposition: 'attachment; filename="test-NF.pdf"' }
+        });
+      });
+
       it('should set the correct content-type headers based on the form data', function () {
         expect(fileResponses.file2.headers['content-type']).toEqual('image/jpeg');
         expect(fileResponses.test.headers['content-type']).toEqual('application/pdf');

@@ -207,7 +207,17 @@ Upload.handler = function (request, reply) {
 
     const payload = uploads.reduce((memo, [file, bucket, key, data, type, disposition]) => { // eslint-disable-line no-unused-vars
 
-      memo[file.key] = data;
+      const filePayload = Object.assign({}, data);
+
+      if (type) {
+        filePayload.ContentType = type;
+      }
+
+      if (disposition) {
+        filePayload.ContentDisposition = disposition;
+      }
+
+      memo[file.key] = filePayload;
       return memo;
     }, {});
 

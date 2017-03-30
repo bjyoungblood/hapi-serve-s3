@@ -129,7 +129,9 @@ Schemas.routeOptionsSchema = Joi.object()
 
     // on response handler to update the response
     // - onResponse(error, res, request, reply, options) -> void
-    //   - res: file object stream
+    //   - res:
+    //     - "GET": file object stream
+    //     - "POST": S3 Response, extended with ContentType and ContentDisposition if possible
     //   - options:
     //     - "GET": Object<{ bucket, key, contentType, contentDisposition, defaultStatusCode }>
     //     - "POST": Object<{ uploads: Array<Object<{ file: String, bucket, key, contentType, contentDisposition, defaultStatusCode }>> }>
