@@ -105,7 +105,7 @@ describe('[integration/serve] "DELETE" spec', function () {
       before('call api', function () {
         const params = {
           method: 'DELETE',
-          url: '/files/test'
+          url: '/files/test-NF.pdf'
         };
 
         return server.inject(params)
@@ -117,7 +117,7 @@ describe('[integration/serve] "DELETE" spec', function () {
       before('reload files', function () {
         const params = {
           method: 'GET',
-          url: '/files/test'
+          url: '/files/test-NF.pdf'
         };
 
         return server.inject(params)

@@ -13,6 +13,32 @@ const Upload = exports;
 
 
 /**
+ * Try to resolve the filekey from the fiven FormData File.
+ *
+ * - try to use the content-disposition `filename`, or ...
+ * - try to use the content-disposition `name`, or ...
+ * - use the FormData key itself
+ */
+internals.getFileKey = function (file) {
+
+  let fileKey = file.key;
+
+  const headers = Hoek.reach(file.payload, 'hapi.headers', { default: {} });
+  if (headers['content-disposition']) {
+    const parsed = Content.disposition(headers['content-disposition']);
+
+    if (parsed.filename) {
+      fileKey = parsed.filename;
+    } else if (parsed.name) {
+      fileKey = parsed.name;
+    }
+  }
+
+  return fileKey;
+};
+
+
+/**
  * uploads the given file and resolves with the S3 response data
  */
 internals.uploadStream = function (request, bucket, key, file, params = {}) {
@@ -61,11 +87,12 @@ Upload.handler = function (request, reply) {
   // resolve `bucket` and `key`
   const getBucketAndKey = function (file) {
     const { randomPostKeys: randomize } = request.route.settings.plugins.s3;
+    const fileKey = internals.getFileKey(file);
 
     return Promise
       .all([
         Helpers.getBucket(request),
-        Helpers.getKey(request, { fileKey: file.key, randomize })
+        Helpers.getKey(request, { fileKey, randomize })
       ])
       .then(([bucket, key]) => [file, bucket, key]);
   };

@@ -43,12 +43,16 @@ Helpers.getFormData = function (files) {
 Helpers.reloadFiles = function (files, { server, prefix }) {
 
   const responses = {};
-  const calls = files.reduce((memo, file) => (Object.assign(memo, {
-    [file.name]: {
-      method: 'GET',
-      url: Path.join(prefix, file.name)
-    }
-  })), {});
+  const calls = files.reduce((memo, file) => {
+    const filename = file.filename || file.name;
+
+    return Object.assign(memo, {
+      [file.name]: {
+        method: 'GET',
+        url: Path.join(prefix, filename)
+      }
+    });
+  }, {});
 
   const promises = Object.keys(calls)
     .map((name) => {

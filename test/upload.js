@@ -110,8 +110,8 @@ describe('[integration/upload] "POST" spec', function () {
       });
 
       after('cleanup files', function () {
-        RimRaf.sync(Path.resolve(__dirname, './fixtures/buckets/test/file2'));
-        RimRaf.sync(Path.resolve(__dirname, './fixtures/buckets/test/test'));
+        RimRaf.sync(Path.resolve(__dirname, './fixtures/buckets/test/file-test2.jpg'));
+        RimRaf.sync(Path.resolve(__dirname, './fixtures/buckets/test/test-NF.pdf'));
         RimRaf.sync(Path.resolve(__dirname, './fixtures/buckets/test/withoutFilename'));
       });
 
@@ -119,12 +119,12 @@ describe('[integration/upload] "POST" spec', function () {
         expect(response.statusCode).toEqual(201);
       });
 
-      it('should respond with s3 upload data for all files', function () {
+      it('should respond with s3 upload data and prefer the content-disposition filename as Key', function () {
         const payload = JSON.parse(response.payload);
 
         expect(payload).toInclude({
-          test: { Key: 'test' },
-          file2: { Key: 'file2' },
+          test: { Key: 'test-NF.pdf' },
+          file2: { Key: 'file-test2.jpg' },
           withoutFilename: { Key: 'withoutFilename' }
         });
       });
@@ -149,7 +149,7 @@ describe('[integration/upload] "POST" spec', function () {
     describe('with existing file', function () {
       const content = Buffer.from('Test 2 PDF\nxxx\n');
       const files = [
-        { name: 'files2/1.pdf', buf: content, filename: 'test-NF.pdf' }
+        { name: 'files2/1.pdf', buf: content }
       ];
 
       let response;
@@ -183,7 +183,7 @@ describe('[integration/upload] "POST" spec', function () {
       });
     });
 
-    describe('with non-valid content-type', function () {
+    describe('with blacklisted content-type', function () {
       const content = Buffer.from('Test 2 Latex\nxxx\n');
       const files = [
         { name: 'thesis.latex', buf: content, filename: 'thesis.latex' }
@@ -350,7 +350,7 @@ describe('[integration/upload] "POST" spec', function () {
     describe('valid request', function () {
       const content = Buffer.from('123\nTest PDF\nxxx');
       const files = [
-        { name: 'test', buf: content, filename: 'test-NF.pdf' }
+        { name: 'test', buf: content }
       ];
 
       let response;
@@ -526,7 +526,7 @@ describe('[integration/upload] "POST" spec', function () {
     describe('valid request', function () {
       const content = Buffer.from('123\nTest PDF\nxxx');
       const files = [
-        { name: 'test-file.pdf', buf: content, filename: 'test-NF.pdf' }
+        { name: 'test', buf: content, filename: 'test-NF.pdf' }
       ];
 
       let response;
@@ -560,7 +560,7 @@ describe('[integration/upload] "POST" spec', function () {
       before('reload file', function () {
         const params = {
           method: 'GET',
-          url: '/files5/deeper/and/deeper/test-file.pdf'
+          url: '/files5/deeper/and/deeper/test-NF.pdf'
         };
 
         return server.inject(params)
@@ -572,7 +572,7 @@ describe('[integration/upload] "POST" spec', function () {
       before('delete file', function () {
         const params = {
           method: 'DELETE',
-          url: '/files5/deeper/and/deeper/test-file.pdf'
+          url: '/files5/deeper/and/deeper/test-NF.pdf'
         };
 
         return server.inject(params)
@@ -592,7 +592,7 @@ describe('[integration/upload] "POST" spec', function () {
       it('should respond with the nested key: `key/{path*}/filename`', function () {
         const payload = JSON.parse(response.payload);
 
-        expect(payload['test-file.pdf'].Key).toEqual('files2/deeper/and/deeper/test-file.pdf');
+        expect(payload.test.Key).toEqual('files2/deeper/and/deeper/test-NF.pdf');
       });
 
       it('should be possible to load the file', function () {
