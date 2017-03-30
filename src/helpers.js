@@ -11,6 +11,15 @@ const internals = {};
 
 
 /**
+ * test if the given value is a truthy value
+ */
+Helpers.exists = function (item) {
+
+  return Boolean(item);
+};
+
+
+/**
  * return an "Internal Server Error" Error with the given `message` set
  *
  * @param {String} message
@@ -183,7 +192,7 @@ Helpers.getObjectMetaData = function (request, bucket, key) {
 Helpers.hasMatch = function (allowed, item) {
 
   if (!allowed) {
-    return true;
+    return false;
   }
 
   const length = allowed.length;

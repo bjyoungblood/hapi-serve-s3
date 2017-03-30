@@ -101,7 +101,10 @@ Upload.handler = function (request, reply) {
   const assertUploadIsValid = function ([file, bucket, key, type, disposition]) {
     const {
       headers,
-      route: { settings: { plugins: { s3: { allowedContentTypes } } } }
+      route: { settings: { plugins: { s3: {
+        allowedContentTypes,
+        ignoredFormKeys
+      } } } }
     } = request;
 
     const { key: fileKey } = file;
@@ -119,9 +122,14 @@ Upload.handler = function (request, reply) {
     }
 
     // check if content type is allowed, if necessary
-    if (!Helpers.hasMatch(allowedContentTypes, type)) {
+    if (allowedContentTypes && !Helpers.hasMatch(allowedContentTypes, type)) {
       const msg = `for upload "${fileKey}" "content-type" is not allowed to be: [${type}]`;
       return Promise.reject(Boom.unsupportedMediaType(msg));
+    }
+
+    // skip form data entries that are blacklisted
+    if (Helpers.hasMatch(ignoredFormKeys, fileKey)) {
+      return null;
     }
 
     return [file, bucket, key, type, disposition];
@@ -145,13 +153,16 @@ Upload.handler = function (request, reply) {
 
   // iterate through all files and prepare and validate them
   const prepareFiles = function (files) {
-    return Promise.all(files.map((file) => {
-      return Promise.resolve(file)
-        .then(getBucketAndKey)
-        .then(assertObjectDoesNotExist)
-        .then(getContentDispositionAndType)
-        .then(assertUploadIsValid);
-    }));
+    return Promise
+      .all(files.map((file) => {
+        return Promise.resolve(file)
+          .then(getBucketAndKey)
+          .then(assertObjectDoesNotExist)
+          .then(getContentDispositionAndType)
+          .then(assertUploadIsValid);
+      }))
+      // filter empty results
+      .then((files) => files.filter(Helpers.exists));
   };
 
   // upload valid file

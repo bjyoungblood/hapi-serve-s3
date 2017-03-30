@@ -105,6 +105,15 @@ Schemas.routeOptionsSchema = Joi.object()
       .optional()
       .description('list of allowed content-types'),
 
+    // for `POST` requets, don't try to upload FormData entries with
+    // the given names
+    ignoredFormKeys: Joi.array()
+      .items(
+        Joi.object().type(RegExp),
+        Joi.string()
+      )
+      .description('list of ignored form entries based on the form key'),
+
     // Set the content-type header to the given value.
     // - if string: use as is
     // - if function: contentType(request, { bucket, key, [contentType] }) -> Promise|String

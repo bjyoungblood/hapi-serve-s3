@@ -26,7 +26,6 @@ Helpers.getFormData = function (files) {
     form.append(name, buf, filename);
   });
 
-
   form.pipe(converter);
 
   return new Promise((resolve, reject) => {

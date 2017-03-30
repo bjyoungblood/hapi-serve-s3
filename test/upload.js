@@ -484,7 +484,7 @@ describe('[integration/upload] "POST" spec', function () {
         RimRaf.sync(Path.resolve(__dirname, './fixtures/buckets/test/prefixxxed'));
       });
 
-      it('should with HTTP 201 (Created)', function () {
+      it('should respond with HTTP 201 (Created)', function () {
         expect(response.statusCode).toEqual(201);
       });
 
@@ -585,7 +585,7 @@ describe('[integration/upload] "POST" spec', function () {
         RimRaf.sync(Path.resolve(__dirname, './fixtures/buckets/test/files2/deeper/and'));
       });
 
-      it('should with HTTP 201 (Created)', function () {
+      it('should respond with HTTP 201 (Created)', function () {
         expect(response.statusCode).toEqual(201);
       });
 
@@ -601,6 +601,78 @@ describe('[integration/upload] "POST" spec', function () {
 
       it('should be possible to delete the file', function () {
         expect(deleteResponse.statusCode).toEqual(204);
+      });
+    });
+  });
+
+  describe('[ignoredFormKeys]', function () {
+    before('define route', function () {
+      return server.route({
+        method: ['GET', 'POST', 'DELETE'],
+        path: '/files6/{path*}',
+        handler: {
+          s3: {
+            s3Params: {
+              s3ForcePathStyle: true,
+              endpoint: new AWS.Endpoint('http://localhost:4569')
+            },
+            bucket: 'test',
+            randomPostKeys: true,
+            ignoredFormKeys: ['options']
+          }
+        }
+      });
+    });
+
+    describe('valid request', function () {
+      const content = Buffer.from('123\nTest PDF\nxxx');
+      const files = [
+        { name: 'file', buf: content, filename: 'this-is-the-filename.pdf' },
+        { name: 'options', buf: Buffer.from(JSON.stringify({ labels: [{ Key: 'User', Value: 'user_1' }] })) }
+      ];
+
+      let response;
+      let rpayload;
+      let formData;
+
+      before('get form data', function () {
+        return Helpers.getFormData(files)
+          .then((data) => {
+            formData = data;
+          });
+      });
+
+      before('upload file via form data', function () {
+        const { payload, form } = formData;
+
+        const params = {
+          method: 'POST',
+          url: '/files6/files2',
+          headers: form.getHeaders(),
+          payload
+        };
+
+        return server.inject(params)
+          .then((res) => {
+            response = res;
+            rpayload = JSON.parse(response.payload);
+          });
+      });
+
+      after('cleanup files', function () {
+        RimRaf.sync(Path.resolve(__dirname, `./fixtures/buckets/test/${rpayload.file.Key}`));
+      });
+
+      it('should respond with HTTP 201 (Created)', function () {
+        expect(response.statusCode).toEqual(201);
+      });
+
+      it('should respond with the uploaded file', function () {
+        expect(rpayload.file).toExist();
+      });
+
+      it('should not respond with the ignored form key', function () {
+        expect(rpayload.options).toNotExist();
       });
     });
   });
