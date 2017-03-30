@@ -130,7 +130,9 @@ Schemas.routeOptionsSchema = Joi.object()
     // on response handler to update the response
     // - onResponse(error, res, request, reply, options) -> void
     //   - res: file object stream
-    //   - options: Object<{ bucket, key, contentType, contentDisposition }>
+    //   - options:
+    //     - "GET": Object<{ bucket, key, contentType, contentDisposition, defaultStatusCode }>
+    //     - "POST": Object<{ uploads: Array<Object<{ file: String, bucket, key, contentType, contentDisposition, defaultStatusCode }>> }>
     onResponse: Joi.func().description('custom reply function'),
 
     // bucket's region (defaults to us-standard: us-east-1)
