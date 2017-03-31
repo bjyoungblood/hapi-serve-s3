@@ -38,7 +38,7 @@ Schemas.routeOptionsSchema = Joi.object()
   .keys({
     // If a string is provided it will be used as bucket name.
     // If a function is provided, it should return or resolve the `bucket`.
-    // - if function: bucket(request) -> Promise|String
+    //   - if function: bucket(request) -> Promise|String
     bucket: Joi.alternatives()
       .try(
         Joi.string(),
@@ -51,7 +51,7 @@ Schemas.routeOptionsSchema = Joi.object()
     //   - otherwise, the key will be treated as the literal S3 key
     //   - for "POST": always used as prefix
     // If a function is provided, it should return or resolve the `key`.
-    // - if function: key(request) -> Promise|String
+    //   - if function: key(request) -> Promise|String
     // If not given try:
     //   - to use the "path" parameter
     //   - 'POST': try to use the FormData's key name
@@ -80,6 +80,8 @@ Schemas.routeOptionsSchema = Joi.object()
 
     // Get the `filename` for the content-disposition header.
     // If given, the function should return or resolve the `filename`.
+    // `filename` will then be added to the Content-Disposition header.
+    // [@see Content-Disposition](https://www.w3.org/Protocols/rfc2616/rfc2616-sec19.html#sec19.5.1)
     // - if function: filename(request, { bucket, key, [filename] }) -> Promise|String
     //   - `filename`: content dispostion file name on S3 / POST form data
     // - if not given:
@@ -138,7 +140,7 @@ Schemas.routeOptionsSchema = Joi.object()
     //   - options:
     //     - "GET": Object<{ bucket, key, contentType, contentDisposition, defaultStatusCode, data }>
     //     - "POST": Object<{ uploads: Array<Object<{ file: String, bucket, key, contentType, contentDisposition, defaultStatusCode, data }>> }>
-    //     - "DELETE": Object<{ bucket, key, defaultStatusCode, data }>
+    //     - "DELETE": Object<{ bucket, key, defaultStatusCode, data, s3Response }>
     onResponse: Joi.func().description('custom reply function'),
 
     // bucket's region (defaults to us-standard: us-east-1)
@@ -152,6 +154,7 @@ Schemas.routeOptionsSchema = Joi.object()
     secretAccessKey: Joi.string().optional().default(process.env.AWS_SECRET_ACCESS_KEY),
 
     // additional aws s3 options
+    // [@see nodejs aws-sdk](http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#constructor-property)
     s3Params: Joi.object().optional().unknown(true).default({})
   });
 
