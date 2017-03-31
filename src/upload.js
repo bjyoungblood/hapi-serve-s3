@@ -224,7 +224,7 @@ Upload.handler = function (request, reply) {
           key,
           contentType: type,
           contentDisposition: disposition,
-          data
+          data: payload[file.key]
         })),
         defaultStatusCode: 201
       };

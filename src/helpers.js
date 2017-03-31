@@ -12,6 +12,9 @@ const internals = {};
 
 /**
  * test if the given value is a truthy value
+ *
+ * @param {Any} item
+ * @return {Boolean}
  */
 Helpers.exists = function (item) {
 
@@ -22,12 +25,36 @@ Helpers.exists = function (item) {
 /**
  * Create a shallow copy of the given `source` without keys
  * that match `null` or `undefined`
+ *
+ * @param {Object} source
+ * @return {Object} shallow copy without `null` and `undefined` values
  */
 Helpers.compactObject = function (source) {
   return Object.keys(source).reduce((memo, key) => {
     const value = source[key];
 
     if (![null, undefined].includes(value)) {
+      memo[key] = value;
+    }
+
+    return memo;
+  }, {});
+};
+
+
+/**
+ * Create a shallow copy of `source` but with `omitted` keys not being part
+ * of it.
+ *
+ * @param {Object} source
+ * @param {Array<Key>} omitted - list of omitted keys
+ * @return {Object} shallow copy without omitted keys
+ */
+Helpers.omit = function (source, omitted) {
+  return Object.keys(source).reduce((memo, key) => {
+    const value = source[key];
+
+    if (!omitted.includes(key)) {
       memo[key] = value;
     }
 
@@ -352,7 +379,7 @@ Helpers.replyWithError = function (request, reply) {
 
     // delegate reply if configured
     if (onResponse) {
-      return onResponse(error, null, request, reply);
+      return onResponse(error, null, request, reply, null);
     }
 
     // default reply strategy

@@ -349,13 +349,15 @@ describe('[integration/serve] "GET" spec', function () {
             },
             bucket: 'test',
             key: 'files2',
-            onResponse(err, res, request, reply, options) {
+            onResponse(...args) {
+              const [err, res, request, reply, options] = args; // eslint-disable-line no-unused-vars
+
+              const { error } = Joi.validate(args, Schemas.onResponseParamsSchema.get);
+              onResponseError = error;
+
               if (err) {
                 return reply({ message: 'there was an error' });
               }
-
-              const { error } = Joi.validate(options, Schemas.onResponseOptionsSchema.get);
-              onResponseError = error;
 
               // update `res`
               const chunks = [];
@@ -425,7 +427,7 @@ describe('[integration/serve] "GET" spec', function () {
           });
       });
 
-      it.skip('should call `onResponse` with the correct schema', function () {
+      it('should call `onResponse` with the correct schema', function () {
         expect(onResponseError).toNotExist();
       });
 

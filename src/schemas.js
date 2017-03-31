@@ -1,6 +1,8 @@
 const Hoek = require('hoek');
 const Joi = require('joi');
 
+const Helpers = require('./helpers');
+
 const Schemas = exports;
 const internals = {};
 
@@ -154,58 +156,138 @@ Schemas.routeOptionsSchema = Joi.object()
   });
 
 
+internals.ReponsePostS3ResponseSchema = Joi.object()
+  .keys({
+    Location: Joi.string().required().description('s3 upload location'),
+    ContentType: Joi.string().description('s3 content type'),
+    ContentDisposition: Joi.string().description('s3 content dispostion')
+  })
+  .unknown(true)
+  .required()
+  .description('s3 reponse of the upload request');
+
+
+/**
+ * Reply Response Schema Definition
+ */
+Schemas.ResponseSchema = {
+  get: Joi.any()
+    .required()
+    .description('s3 response file stream'),
+
+  post: Joi.object()
+    .unknown(true)
+    .pattern(/.*/, internals.ReponsePostS3ResponseSchema)
+    .description('Object keyed by the FormData keys, where the values are S3 upload responses'),
+
+  delete: Joi.only(null)
+};
+
+
+/**
+ * `onResponse` options common keys
+ */
+internals.onResponseOptionsCommonKeys = {
+  bucket: Joi.string().required().description('s3 bucket'),
+  key: Joi.string().required().description('s3 key'),
+  contentType: Joi.string().optional(),
+  contentDisposition: Joi.string().optional(),
+  defaultStatusCode: Joi.number().integer().required().description('http response code for the default reply'),
+  data: Joi.any()
+    .required()
+    .description('that data that would be passed to the reply interface')
+};
+
+
 /**
  * Schema defintion for the `onResponse` options parameter
  */
-Schemas.onResponseOptionsSchema = {
-  // `onResponse` payload for "GET" calls
+internals.onResponseOptionsSchema = {
   get: Joi.object()
+    .keys(internals.onResponseOptionsCommonKeys)
     .keys({
-      bucket: Joi.string().required(),
-      key: Joi.string().required(),
-      contentType: Joi.string().optional(),
-      contentDisposition: Joi.string().optional(),
-      defaultStatusCode: Joi.number().integer().required().description('http response code for the default reply'),
-      data: Joi.any()
-        .required()
-        .description('stream of the s3 reponse (file)')
+      defaultStatusCode: Joi.only(200),
+      data: Schemas.ResponseSchema.get
     })
     .required(),
 
-  // `onResponse` payload for "POST" calls
   post: Joi.object()
     .keys({
       uploads: Joi.array()
         .items(Joi.object()
+          .keys(Helpers.omit(internals.onResponseOptionsCommonKeys, ['defaultStatusCode']))
           .keys({
             file: Joi.string().required().description('FormData key'),
-            bucket: Joi.string().required(),
-            key: Joi.string().required(),
-            contentType: Joi.string().optional(),
-            contentDisposition: Joi.string().optional(),
-            data: Joi.object()
-              .keys({
-                Location: Joi.string().required().description('s3 upload location')
-              })
-              .unknown(true)
-              .required()
-              .description('s3 reponse of the upload request')
+            data: internals.ReponsePostS3ResponseSchema
           })
         ),
-      defaultStatusCode: Joi.number().integer().required().description('http response code for the default reply')
+      defaultStatusCode: Joi.only(201)
     })
     .required(),
 
-  // `onResponse` payload for "DELETE" calls
   delete: Joi.object()
+    .keys(Helpers.omit(internals.onResponseOptionsCommonKeys, ['contentType', 'contentDisposition']))
     .keys({
-      bucket: Joi.string().required(),
-      key: Joi.string().required(),
-      defaultStatusCode: Joi.number().integer().required().description('http response code for the default reply'),
-      data: Joi.object()
+      defaultStatusCode: Joi.only(204),
+      data: Schemas.ResponseSchema.delete,
+      s3Response: Joi.object()
         .unknown(true)
         .required()
         .description('s3 reponse of the `deleteObject` request')
     })
+    .required()
+};
+
+
+/**
+ * `onResponse` Parameters Schema Defintion
+ */
+Schemas.onResponseParamsSchema = {
+  get: Joi.array()
+    .ordered(
+      Joi.any().optional().description('error'),
+      Joi.alternatives().try([
+        Schemas.ResponseSchema.get,
+        Joi.valid(null)
+      ]),
+      Joi.any().optional().description('reply'),
+      Joi.any().optional().description('request'),
+      Joi.alternatives().try([
+        internals.onResponseOptionsSchema.get,
+        Joi.only(null)
+      ])
+    )
+    .required(),
+
+  post: Joi.array()
+    .ordered(
+      Joi.any().optional().description('error'),
+      Joi.alternatives().try([
+        Schemas.ResponseSchema.post,
+        Joi.only(null)
+      ]),
+      Joi.any().optional().description('reply'),
+      Joi.any().optional().description('request'),
+      Joi.alternatives().try([
+        internals.onResponseOptionsSchema.post,
+        Joi.only(null)
+      ])
+    )
+    .required(),
+
+  delete: Joi.array()
+    .ordered(
+      Joi.any().optional().description('error'),
+      Joi.alternatives().try([
+        Schemas.ResponseSchema.delete,
+        Joi.only(null)
+      ]),
+      Joi.any().optional().description('reply'),
+      Joi.any().optional().description('request'),
+      Joi.alternatives().try([
+        internals.onResponseOptionsSchema.delete,
+        Joi.only(null)
+      ])
+    )
     .required()
 };

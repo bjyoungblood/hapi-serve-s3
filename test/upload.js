@@ -338,13 +338,15 @@ describe('[integration/upload] "POST" spec', function () {
               endpoint: new AWS.Endpoint('http://localhost:4569')
             },
             bucket: 'test',
-            onResponse(err, res, request, reply, options) {
+            onResponse(...args) {
+              const [err, res, request, reply, options] = args; // eslint-disable-line no-unused-vars
+
+              const { error } = Joi.validate(args, Schemas.onResponseParamsSchema.post);
+              onResponseError = error;
+
               if (err) {
                 return reply({ message: 'there was an error' });
               }
-
-              const { error } = Joi.validate(options, Schemas.onResponseOptionsSchema.post);
-              onResponseError = error;
 
               const transformedPayload = Object.keys(res)
                 .map((key) => {
@@ -436,7 +438,7 @@ describe('[integration/upload] "POST" spec', function () {
         RimRaf.sync(Path.resolve(__dirname, './fixtures/buckets/test/test'));
       });
 
-      it.skip('should call `onResponse` with the correct schema', function () {
+      it('should call `onResponse` with the correct schema', function () {
         expect(onResponseError).toNotExist();
       });
 

@@ -70,7 +70,8 @@ Delete.handler = function (request, reply) {
         bucket,
         key,
         defaultStatusCode: 204,
-        data
+        data: null,
+        s3Response: data
       });
 
       return onResponse(null, /* res */null, request, reply, options);

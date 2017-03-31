@@ -153,18 +153,20 @@ describe('[integration/serve] "DELETE" spec', function () {
             },
             bucket: 'test',
             key: 'files3',
-            onResponse(err, res, request, reply, options) {
+            onResponse(...args) {
+              const [err, res, request, reply, options] = args;
+
               // skip on response for ['get' and 'post']
               if (['get', 'post'].includes(request.method)) {
                 return reply(err || res).code(options.defaultStatusCode);
               }
 
+              const { error } = Joi.validate(args, Schemas.onResponseParamsSchema.delete);
+              onResponseError = error;
+
               if (err) {
                 return reply({ message: 'there was an error' });
               }
-
-              const { error } = Joi.validate(options, Schemas.onResponseOptionsSchema.delete);
-              onResponseError = error;
 
               return reply().code(204);
             }
@@ -245,7 +247,7 @@ describe('[integration/serve] "DELETE" spec', function () {
           });
       });
 
-      it.skip('should call `onResponse` with the correct schema', function () {
+      it('should call `onResponse` with the correct schema', function () {
         expect(onResponseError).toNotExist();
       });
 
