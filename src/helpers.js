@@ -20,6 +20,23 @@ Helpers.exists = function (item) {
 
 
 /**
+ * Create a shallow copy of the given `source` without keys
+ * that match `null` or `undefined`
+ */
+Helpers.compactObject = function (source) {
+  return Object.keys(source).reduce((memo, key) => {
+    const value = source[key];
+
+    if (![null, undefined].includes(value)) {
+      memo[key] = value;
+    }
+
+    return memo;
+  }, {});
+};
+
+
+/**
  * return an "Internal Server Error" Error with the given `message` set
  *
  * @param {String} message

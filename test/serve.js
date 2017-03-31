@@ -10,6 +10,7 @@ const S3rver = require('s3rver');
 const expect = require('expect');
 
 const HapiServeS3 = require('../src');
+const Schemas = require('../src/schemas');
 
 process.env.AWS_ACCESS_KEY_ID = 'FAKE';
 process.env.AWS_SECRET_ACCESS_KEY = 'FAKE';
@@ -334,6 +335,8 @@ describe('[integration/serve] "GET" spec', function () {
   });
 
   describe('[onResponse]', function () {
+    let onResponseError;
+
     before('define route', function () {
       return server.route({
         method: 'GET',
@@ -350,6 +353,9 @@ describe('[integration/serve] "GET" spec', function () {
               if (err) {
                 return reply({ message: 'there was an error' });
               }
+
+              const { error } = Joi.validate(options, Schemas.onResponseOptionsSchema.get);
+              onResponseError = error;
 
               // update `res`
               const chunks = [];
@@ -383,6 +389,10 @@ describe('[integration/serve] "GET" spec', function () {
           });
       });
 
+      it('should call `onResponse` with the correct schema', function () {
+        expect(onResponseError).toNotExist();
+      });
+
       it('should respond with the intercepted statusCode', function () {
         expect(response.statusCode).toEqual(200);
       });
@@ -413,6 +423,10 @@ describe('[integration/serve] "GET" spec', function () {
           .then((res) => {
             response = res;
           });
+      });
+
+      it.skip('should call `onResponse` with the correct schema', function () {
+        expect(onResponseError).toNotExist();
       });
 
       it('should respond with the intercepted statusCode', function () {

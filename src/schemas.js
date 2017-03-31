@@ -132,9 +132,11 @@ Schemas.routeOptionsSchema = Joi.object()
     //   - res:
     //     - "GET": file object stream
     //     - "POST": S3 Response, extended with ContentType and ContentDisposition if possible
+    //     - "DELETE": null
     //   - options:
-    //     - "GET": Object<{ bucket, key, contentType, contentDisposition, defaultStatusCode }>
-    //     - "POST": Object<{ uploads: Array<Object<{ file: String, bucket, key, contentType, contentDisposition, defaultStatusCode }>> }>
+    //     - "GET": Object<{ bucket, key, contentType, contentDisposition, defaultStatusCode, data }>
+    //     - "POST": Object<{ uploads: Array<Object<{ file: String, bucket, key, contentType, contentDisposition, defaultStatusCode, data }>> }>
+    //     - "DELETE": Object<{ bucket, key, defaultStatusCode, data }>
     onResponse: Joi.func().description('custom reply function'),
 
     // bucket's region (defaults to us-standard: us-east-1)
@@ -150,3 +152,60 @@ Schemas.routeOptionsSchema = Joi.object()
     // additional aws s3 options
     s3Params: Joi.object().optional().unknown(true).default({})
   });
+
+
+/**
+ * Schema defintion for the `onResponse` options parameter
+ */
+Schemas.onResponseOptionsSchema = {
+  // `onResponse` payload for "GET" calls
+  get: Joi.object()
+    .keys({
+      bucket: Joi.string().required(),
+      key: Joi.string().required(),
+      contentType: Joi.string().optional(),
+      contentDisposition: Joi.string().optional(),
+      defaultStatusCode: Joi.number().integer().required().description('http response code for the default reply'),
+      data: Joi.any()
+        .required()
+        .description('stream of the s3 reponse (file)')
+    })
+    .required(),
+
+  // `onResponse` payload for "POST" calls
+  post: Joi.object()
+    .keys({
+      uploads: Joi.array()
+        .items(Joi.object()
+          .keys({
+            file: Joi.string().required().description('FormData key'),
+            bucket: Joi.string().required(),
+            key: Joi.string().required(),
+            contentType: Joi.string().optional(),
+            contentDisposition: Joi.string().optional(),
+            data: Joi.object()
+              .keys({
+                Location: Joi.string().required().description('s3 upload location')
+              })
+              .unknown(true)
+              .required()
+              .description('s3 reponse of the upload request')
+          })
+        ),
+      defaultStatusCode: Joi.number().integer().required().description('http response code for the default reply')
+    })
+    .required(),
+
+  // `onResponse` payload for "DELETE" calls
+  delete: Joi.object()
+    .keys({
+      bucket: Joi.string().required(),
+      key: Joi.string().required(),
+      defaultStatusCode: Joi.number().integer().required().description('http response code for the default reply'),
+      data: Joi.object()
+        .unknown(true)
+        .required()
+        .description('s3 reponse of the `deleteObject` request')
+    })
+    .required()
+};

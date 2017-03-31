@@ -4,12 +4,14 @@ const Path = require('path');
 
 const AWS = require('aws-sdk');
 const Hapi = require('hapi');
+const Joi = require('joi');
 const RimRaf = require('rimraf');
 const S3rver = require('s3rver');
 const expect = require('expect');
 
 const Helpers = require('./helpers');
 const HapiServeS3 = require('../src');
+const Schemas = require('../src/schemas');
 
 process.env.AWS_ACCESS_KEY_ID = 'FAKE';
 process.env.AWS_SECRET_ACCESS_KEY = 'FAKE';
@@ -132,6 +134,129 @@ describe('[integration/serve] "DELETE" spec', function () {
 
       it('should not be possible to load the files again', function () {
         expect(getResponse.statusCode).toEqual(404);
+      });
+    });
+  });
+
+  describe('[onResponse]', function () {
+    let onResponseError;
+
+    before('define a test route', function () {
+      return server.route({
+        method: ['GET', 'POST', 'DELETE'],
+        path: '/files2/{path?}',
+        handler: {
+          s3: {
+            s3Params: { // these options are just for testing purpose
+              s3ForcePathStyle: true,
+              endpoint: new AWS.Endpoint('http://localhost:4569')
+            },
+            bucket: 'test',
+            key: 'files3',
+            onResponse(err, res, request, reply, options) {
+              // skip on response for ['get' and 'post']
+              if (['get', 'post'].includes(request.method)) {
+                return reply(err || res).code(options.defaultStatusCode);
+              }
+
+              if (err) {
+                return reply({ message: 'there was an error' });
+              }
+
+              const { error } = Joi.validate(options, Schemas.onResponseOptionsSchema.delete);
+              onResponseError = error;
+
+              return reply().code(204);
+            }
+          }
+        }
+      });
+    });
+
+    // upload/prepare file
+    const content = Buffer.from('123\nTest PDF\nxxx');
+    const files = [
+      { name: 'test', buf: content, filename: 'test-NF.pdf' }
+    ];
+
+    before('get form data', function () {
+      return Helpers.getFormData(files)
+        .then((data) => {
+          this.formData = data;
+        });
+    });
+
+    before('upload file via form data', function () {
+      const { payload, form } = this.formData;
+
+      const params = {
+        method: 'POST',
+        url: '/files2/',
+        headers: form.getHeaders(),
+        payload
+      };
+
+      return server.inject(params)
+        .then((res) => {
+          expect(res.statusCode).toEqual(201);
+        });
+    });
+
+    after('cleanup files', function () {
+      RimRaf.sync(Path.resolve(__dirname, './fixtures/buckets/test/files3'));
+    });
+
+    describe('valid request', function () {
+      let response;
+
+      before('call api', function () {
+        const params = {
+          method: 'DELETE',
+          url: '/files2/test-NF.pdf'
+        };
+
+        return server.inject(params)
+          .then((resp) => {
+            response = resp;
+          });
+      });
+
+      it('should call `onResponse` with the correct schema', function () {
+        expect(onResponseError).toNotExist();
+      });
+
+      it('should respond with the intercepter HTTP status code', function () {
+        expect(response.statusCode).toEqual(204);
+      });
+    });
+
+    describe('bad request', function () {
+      let response;
+
+      before('upload invalid content', function () {
+        const params = {
+          method: 'DELETE',
+          url: '/files2/123hkjsdf89NONONO'
+        };
+
+        return server.inject(params)
+          .then((res) => {
+            response = res;
+          });
+      });
+
+      it.skip('should call `onResponse` with the correct schema', function () {
+        expect(onResponseError).toNotExist();
+      });
+
+      it('should respond with the intercepted status code', function () {
+        expect(response.statusCode).toEqual(200);
+      });
+
+      it('should respond with the intercepted payload', function () {
+        const payload = JSON.parse(response.payload);
+
+        expect(payload).toInclude({ message: 'there was an error' });
       });
     });
   });

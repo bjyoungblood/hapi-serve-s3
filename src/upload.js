@@ -207,29 +207,24 @@ Upload.handler = function (request, reply) {
 
     const payload = uploads.reduce((memo, [file, bucket, key, data, type, disposition]) => { // eslint-disable-line no-unused-vars
 
-      const filePayload = Object.assign({}, data);
+      memo[file.key] = Helpers.compactObject(Object.assign({}, data, {
+        ContentType: type,
+        ContentDisposition: disposition
+      }));
 
-      if (type) {
-        filePayload.ContentType = type;
-      }
-
-      if (disposition) {
-        filePayload.ContentDisposition = disposition;
-      }
-
-      memo[file.key] = filePayload;
       return memo;
     }, {});
 
     // delegate reply if configured
     if (onResponse) {
       const options = {
-        uploads: uploads.map(([file, bucket, key, data, type, disposition]) => ({ // eslint-disable-line no-unused-vars
+        uploads: uploads.map(([file, bucket, key, data, type, disposition]) => Helpers.compactObject({
           file: file.key,
           bucket,
           key,
           contentType: type,
-          contentDisposition: disposition
+          contentDisposition: disposition,
+          data
         })),
         defaultStatusCode: 201
       };

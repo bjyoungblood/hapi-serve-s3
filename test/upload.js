@@ -2,13 +2,15 @@
 
 const Path = require('path');
 
-const S3rver = require('s3rver');
 const AWS = require('aws-sdk');
 const Hapi = require('hapi');
+const Joi = require('joi');
 const RimRaf = require('rimraf');
+const S3rver = require('s3rver');
 
 const Helpers = require('./helpers');
 const HapiServeS3 = require('../src');
+const Schemas = require('../src/schemas');
 
 const expect = require('expect');
 
@@ -323,6 +325,8 @@ describe('[integration/upload] "POST" spec', function () {
   });
 
   describe('[onResponse]', function () {
+    let onResponseError;
+
     before('define route', function () {
       return server.route({
         method: ['GET', 'POST'],
@@ -334,10 +338,13 @@ describe('[integration/upload] "POST" spec', function () {
               endpoint: new AWS.Endpoint('http://localhost:4569')
             },
             bucket: 'test',
-            onResponse(err, res, request, reply /* , options */) {
+            onResponse(err, res, request, reply, options) {
               if (err) {
                 return reply({ message: 'there was an error' });
               }
+
+              const { error } = Joi.validate(options, Schemas.onResponseOptionsSchema.post);
+              onResponseError = error;
 
               const transformedPayload = Object.keys(res)
                 .map((key) => {
@@ -391,6 +398,10 @@ describe('[integration/upload] "POST" spec', function () {
         RimRaf.sync(Path.resolve(__dirname, './fixtures/buckets/test/test'));
       });
 
+      it('should call `onResponse` with the correct schema', function () {
+        expect(onResponseError).toNotExist();
+      });
+
       it('should respond with the intercepted status code', function () {
         expect(response.statusCode).toEqual(200);
       });
@@ -423,6 +434,10 @@ describe('[integration/upload] "POST" spec', function () {
 
       after('cleanup files', function () {
         RimRaf.sync(Path.resolve(__dirname, './fixtures/buckets/test/test'));
+      });
+
+      it.skip('should call `onResponse` with the correct schema', function () {
+        expect(onResponseError).toNotExist();
       });
 
       it('should respond with the intercepted status code', function () {

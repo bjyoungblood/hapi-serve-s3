@@ -66,12 +66,12 @@ Delete.handler = function (request, reply) {
 
     // delegate reply if configured
     if (onResponse) {
-      const options = {
+      const options = Helpers.compactObject({
         bucket,
         key,
         defaultStatusCode: 204,
-        s3Response: data
-      };
+        data
+      });
 
       return onResponse(null, /* res */null, request, reply, options);
     }

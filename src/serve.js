@@ -95,13 +95,14 @@ Serve.handler = function (request, reply) {
 
     // delegate reply if configured
     if (onResponse) {
-      const options = {
+      const options = Helpers.compactObject({
         bucket,
         key,
         contentType: type,
         contentDisposition: disposition,
-        defaultStatusCode: 200
-      };
+        defaultStatusCode: 200,
+        data: data.stream
+      });
 
       return onResponse(/* error */null, /* res */data.stream, request, reply, options);
     }
