@@ -218,7 +218,7 @@ Upload.handler = function (request, reply) {
     // delegate reply if configured
     if (onResponse) {
       const options = {
-        uploads: uploads.map(([file, bucket, key, data, type, disposition]) => Helpers.compactObject({
+        uploads: uploads.map(([file, bucket, key, data, type, disposition]) => Helpers.compactObject({ // eslint-disable-line no-unused-vars
           file: file.key,
           bucket,
           key,
