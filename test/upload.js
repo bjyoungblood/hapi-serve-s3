@@ -264,7 +264,7 @@ describe('[integration/upload] "POST" spec', function () {
               endpoint: new AWS.Endpoint('http://localhost:4569')
             },
             bucket: 'test',
-            key: 'files3'   // used as prefix
+            key: 'files3' // used as prefix
           }
         }
       });

@@ -222,8 +222,7 @@ internals.onResponseOptionsSchema = {
           .keys({
             file: Joi.string().required().description('FormData key'),
             data: internals.ReponsePostS3ResponseSchema
-          })
-        ),
+          })),
       defaultStatusCode: Joi.only(201)
     })
     .required(),

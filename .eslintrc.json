@@ -17,6 +17,7 @@
     "comma-dangle": [ 2, "never" ],
     "new-cap": [ 2, { "newIsCap": true, "capIsNew": false } ],
     "arrow-parens": [ 2, "always" ],
-    "import/no-extraneous-dependencies": [ 2, { "devDependencies": true } ]
+    "import/no-extraneous-dependencies": [ 2, { "devDependencies": true } ],
+    "no-buffer-constructor": 0
   }
 }
