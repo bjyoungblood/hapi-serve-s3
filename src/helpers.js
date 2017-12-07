@@ -239,7 +239,7 @@ Helpers.hasMatch = function (allowed, item) {
     return false;
   }
 
-  const length = allowed.length;
+  const { length } = allowed;
 
   for (let i = 0; i < length; ++i) { // eslint-disable-line no-plusplus
     const val = allowed[i];

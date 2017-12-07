@@ -128,10 +128,9 @@ Upload.handler = function (request, reply) {
   const assertUploadIsValid = function ([file, bucket, key, type, disposition]) {
     const {
       headers,
-      route: { settings: { plugins: { s3: {
-        allowedContentTypes,
-        ignoredFormKeys
-      } } } }
+      route: {
+        settings: { plugins: { s3: { allowedContentTypes, ignoredFormKeys } } }
+      }
     } = request;
 
     const { key: fileKey } = file;
@@ -229,7 +228,7 @@ Upload.handler = function (request, reply) {
         defaultStatusCode: 201
       };
 
-      return onResponse(null, /* res*/payload, request, reply, options);
+      return onResponse(null, /* res */payload, request, reply, options);
     }
 
     // default reply strategy
