@@ -157,11 +157,11 @@ internals.randomizeKey = function (test, key) {
 Helpers.getKey = function (request, options = {}) {
 
   const { key } = request.route.settings.plugins.s3;
-  const { fileKey, randomize } = options;
+  const { formDataKey, fileKey, randomize } = options;
 
   const getKey = function () {
     if (typeof key === 'function') {
-      return Promise.resolve(key(request));
+      return Promise.resolve(key(request, formDataKey));
     }
 
     const prefix = (typeof key === 'string') ? key : '';

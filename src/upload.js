@@ -92,7 +92,7 @@ Upload.handler = function (request, reply) {
     return Promise
       .all([
         Helpers.getBucket(request),
-        Helpers.getKey(request, { fileKey, randomize })
+        Helpers.getKey(request, { formDataKey: file.key, fileKey, randomize })
       ])
       .then(([bucket, key]) => [file, bucket, key]);
   };
@@ -229,7 +229,7 @@ Upload.handler = function (request, reply) {
         defaultStatusCode: 201
       };
 
-      return onResponse(null, /* res*/payload, request, reply, options);
+      return onResponse(null, payload, request, reply, options);
     }
 
     // default reply strategy
