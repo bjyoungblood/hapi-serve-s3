@@ -140,7 +140,7 @@ internals.randomizeKey = function (test, key) {
   const ext = Path.extname(key);
   const dirname = Path.dirname(key);
 
-  const buf = new Buffer(32);
+  const buf = Buffer.alloc(32);
   Uuid.v4(null, buf);
   const randomKey = Hoek.base64urlEncode(buf);
 
@@ -239,7 +239,7 @@ Helpers.hasMatch = function (allowed, item) {
     return false;
   }
 
-  const length = allowed.length;
+  const { length } = allowed;
 
   for (let i = 0; i < length; ++i) { // eslint-disable-line no-plusplus
     const val = allowed[i];

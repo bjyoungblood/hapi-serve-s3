@@ -264,7 +264,7 @@ describe('[integration/upload] "POST" spec', function () {
               endpoint: new AWS.Endpoint('http://localhost:4569')
             },
             bucket: 'test',
-            key: 'files3'   // used as prefix
+            key: 'files3' // used as prefix
           }
         }
       });
@@ -338,7 +338,7 @@ describe('[integration/upload] "POST" spec', function () {
             bucket: 'test',
             key: (request, formDataKey) => {
               if (request.method === 'post') {
-                const filename = request.payload[formDataKey].hapi.filename;
+                const { filename } = request.payload[formDataKey].hapi;
                 return `files4/${filename}`;
               }
               const filename = request.url.path.split('/').reverse()[0];
