@@ -32,7 +32,7 @@ Schemas.getMode = function (request) {
 
 
 /**
- * Schema Defintion of the `GET` Route Options
+ * Schema Definition of the `GET` Route Options
  */
 Schemas.routeOptionsSchema = Joi.object()
   .keys({
@@ -72,7 +72,7 @@ Schemas.routeOptionsSchema = Joi.object()
     //     - try to load header from S3 directly
     //     - try 'attachment'
     //   - for 'POST'
-    //     - try 'attachement'
+    //     - try 'attachment'
     // - if `attachment`: content-disposition will always be set to 'attachment'
     // - if `inline`: content-disposition will always be set to 'inline'
     // - if `<object>`: key=['get', 'post', ...] value=<mode>
@@ -83,10 +83,10 @@ Schemas.routeOptionsSchema = Joi.object()
     // `filename` will then be added to the Content-Disposition header.
     // [@see Content-Disposition](https://www.w3.org/Protocols/rfc2616/rfc2616-sec19.html#sec19.5.1)
     // - if function: filename(request, { bucket, key, [filename] }) -> Promise|String
-    //   - `filename`: content dispostion file name on S3 / POST form data
+    //   - `filename`: content disposition file name on S3 / POST form data
     // - if not given:
     //   - if mode=auto: use the S3 ContentType / FormData if exists
-    //   - if mode=attachment|inline: use the key's basenamece
+    //   - if mode=attachment|inline: use the key's basename
     filename: Joi.alternatives()
       .when('mode', {
         is: false,
@@ -109,7 +109,7 @@ Schemas.routeOptionsSchema = Joi.object()
       .optional()
       .description('list of allowed content-types'),
 
-    // for `POST` requets, don't try to upload FormData entries with
+    // for `POST` request, don't try to upload FormData entries with
     // the given names
     ignoredFormKeys: Joi.array()
       .items(
@@ -159,15 +159,15 @@ Schemas.routeOptionsSchema = Joi.object()
   });
 
 
-internals.ReponsePostS3ResponseSchema = Joi.object()
+internals.ResponsePostS3ResponseSchema = Joi.object()
   .keys({
     Location: Joi.string().required().description('s3 upload location'),
     ContentType: Joi.string().description('s3 content type'),
-    ContentDisposition: Joi.string().description('s3 content dispostion')
+    ContentDisposition: Joi.string().description('s3 content disposition')
   })
   .unknown(true)
   .required()
-  .description('s3 reponse of the upload request');
+  .description('s3 response of the upload request');
 
 
 /**
@@ -180,7 +180,7 @@ Schemas.ResponseSchema = {
 
   post: Joi.object()
     .unknown(true)
-    .pattern(/.*/, internals.ReponsePostS3ResponseSchema)
+    .pattern(/.*/, internals.ResponsePostS3ResponseSchema)
     .description('Object keyed by the FormData keys, where the values are S3 upload responses'),
 
   delete: Joi.only(null)
@@ -203,7 +203,7 @@ internals.onResponseOptionsCommonKeys = {
 
 
 /**
- * Schema defintion for the `onResponse` options parameter
+ * Schema definition for the `onResponse` options parameter
  */
 internals.onResponseOptionsSchema = {
   get: Joi.object()
@@ -221,9 +221,8 @@ internals.onResponseOptionsSchema = {
           .keys(Helpers.omit(internals.onResponseOptionsCommonKeys, ['defaultStatusCode']))
           .keys({
             file: Joi.string().required().description('FormData key'),
-            data: internals.ReponsePostS3ResponseSchema
-          })
-        ),
+            data: internals.ResponsePostS3ResponseSchema
+          })),
       defaultStatusCode: Joi.only(201)
     })
     .required(),
@@ -236,14 +235,14 @@ internals.onResponseOptionsSchema = {
       s3Response: Joi.object()
         .unknown(true)
         .required()
-        .description('s3 reponse of the `deleteObject` request')
+        .description('s3 response of the `deleteObject` request')
     })
     .required()
 };
 
 
 /**
- * `onResponse` Parameters Schema Defintion
+ * `onResponse` Parameters Schema Definition
  */
 Schemas.onResponseParamsSchema = {
   get: Joi.array()

@@ -13,7 +13,7 @@ const Upload = exports;
 
 
 /**
- * Try to resolve the filekey from the fiven FormData File.
+ * Try to resolve the filekey from the given FormData File.
  *
  * - try to use the content-disposition `filename`, or ...
  * - try to use the content-disposition `name`, or ...
@@ -92,7 +92,7 @@ Upload.handler = function (request, reply) {
     return Promise
       .all([
         Helpers.getBucket(request),
-        Helpers.getKey(request, { fileKey, randomize })
+        Helpers.getKey(request, { formDataKey: file.key, fileKey, randomize })
       ])
       .then(([bucket, key]) => [file, bucket, key]);
   };
@@ -128,10 +128,16 @@ Upload.handler = function (request, reply) {
   const assertUploadIsValid = function ([file, bucket, key, type, disposition]) {
     const {
       headers,
-      route: { settings: { plugins: { s3: {
-        allowedContentTypes,
-        ignoredFormKeys
-      } } } }
+      route: {
+        settings: {
+          plugins: {
+            s3: {
+              allowedContentTypes,
+              ignoredFormKeys
+            }
+          }
+        }
+      }
     } = request;
 
     const { key: fileKey } = file;
@@ -229,7 +235,7 @@ Upload.handler = function (request, reply) {
         defaultStatusCode: 201
       };
 
-      return onResponse(null, /* res*/payload, request, reply, options);
+      return onResponse(null, /* res */payload, request, reply, options);
     }
 
     // default reply strategy

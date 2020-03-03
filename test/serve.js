@@ -159,8 +159,8 @@ describe('[integration/serve] "GET" spec', function () {
             },
             // force mode to `attachment`
             mode: 'attachment',
-            bucket: 'test',   // fixed bucket
-            key: 'files2',    // used as prefix
+            bucket: 'test', // fixed bucket
+            key: 'files2', // used as prefix
             // define content type based on key
             contentType: (request, { /* bucket, */ key, contentType }) => {
               if (key.match(/\.pdf$/)) {

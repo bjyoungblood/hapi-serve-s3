@@ -264,7 +264,7 @@ describe('[integration/upload] "POST" spec', function () {
               endpoint: new AWS.Endpoint('http://localhost:4569')
             },
             bucket: 'test',
-            key: 'files3'   // used as prefix
+            key: 'files3' // used as prefix
           }
         }
       });
@@ -324,13 +324,102 @@ describe('[integration/upload] "POST" spec', function () {
     });
   });
 
+  describe('[mode=auto][key as function]', function () {
+    before('define route', function () {
+      return server.route({
+        method: ['GET', 'POST'],
+        path: '/files3/{path?}',
+        handler: {
+          s3: {
+            s3Params: { // these options are just for testing purpose
+              s3ForcePathStyle: true,
+              endpoint: new AWS.Endpoint('http://localhost:4569')
+            },
+            bucket: 'test',
+            key: (request, formDataKey) => {
+              if (request.method === 'post') {
+                const { filename } = request.payload[formDataKey].hapi;
+                return `files4/${filename}`;
+              }
+              const filename = request.url.path.split('/').reverse()[0];
+              return `files4/${filename}`;
+            }
+          }
+        }
+      });
+    });
+
+    describe('valid request', function () {
+      const content = Buffer.from('123\nTest PDF\nxxx');
+      const files = [
+        { name: 'fileA', buf: content, filename: 'document.pdf' },
+        { name: 'fileB', buf: content, filename: 'image.png' }
+      ];
+
+      let response;
+      let formData;
+      let fileResponses;
+
+      before('get form data', function () {
+        return Helpers.getFormData(files)
+          .then((data) => {
+            formData = data;
+          });
+      });
+
+      before('upload files', function () {
+        const { payload, form } = formData;
+
+        const params = {
+          method: 'POST',
+          url: '/files3/',
+          headers: form.getHeaders(),
+          payload
+        };
+
+        return server.inject(params)
+          .then((res) => {
+            response = res;
+          });
+      });
+
+      before('reload files', function () {
+        return Helpers.reloadFiles(files, { server, prefix: '/files3/' })
+          .then((responses) => {
+            fileResponses = responses;
+          });
+      });
+
+      after('cleanup files', function () {
+        RimRaf.sync(Path.resolve(__dirname, './fixtures/buckets/test/files4'));
+      });
+
+      it('should respond with 201 (Created)', function () {
+        expect(response.statusCode).toEqual(201);
+      });
+
+      it('should be possible to GET the file afterwards', function () {
+        expect(fileResponses.fileA.statusCode).toEqual(200);
+      });
+
+      it('should respond with s3 upload data and include sub-folder in filename', function () {
+        const payload = JSON.parse(response.payload);
+
+        expect(payload).toInclude({
+          fileA: { Key: 'files4/document.pdf' },
+          fileB: { Key: 'files4/image.png' }
+        });
+      });
+    });
+  });
+
   describe('[onResponse]', function () {
     let onResponseError;
 
     before('define route', function () {
       return server.route({
         method: ['GET', 'POST'],
-        path: '/files3/{path?}',
+        path: '/files4/{path?}',
         handler: {
           s3: {
             s3Params: { // these options are just for testing purpose
@@ -385,7 +474,7 @@ describe('[integration/upload] "POST" spec', function () {
 
         const params = {
           method: 'POST',
-          url: '/files3/',
+          url: '/files4/',
           headers: form.getHeaders(),
           payload
         };
@@ -424,7 +513,7 @@ describe('[integration/upload] "POST" spec', function () {
       before('upload invalid content', function () {
         const params = {
           method: 'POST',
-          url: '/files3/',
+          url: '/files4/',
           payload: { not: 'supported' }
         };
 
@@ -458,7 +547,7 @@ describe('[integration/upload] "POST" spec', function () {
     before('define route', function () {
       return server.route({
         method: ['GET', 'POST'],
-        path: '/files4/{path?}',
+        path: '/files5/{path?}',
         handler: {
           s3: {
             s3Params: { // these options are just for testing purpose
@@ -494,7 +583,7 @@ describe('[integration/upload] "POST" spec', function () {
 
         const params = {
           method: 'POST',
-          url: '/files4/',
+          url: '/files5/',
           headers: form.getHeaders(),
           payload
         };
@@ -534,7 +623,7 @@ describe('[integration/upload] "POST" spec', function () {
     before('define route', function () {
       return server.route({
         method: ['GET', 'POST', 'DELETE'],
-        path: '/files5/{path*}',
+        path: '/files6/{path*}',
         handler: {
           s3: {
             s3Params: {
@@ -571,7 +660,7 @@ describe('[integration/upload] "POST" spec', function () {
 
         const params = {
           method: 'POST',
-          url: '/files5/deeper/and/deeper',
+          url: '/files6/deeper/and/deeper',
           headers: form.getHeaders(),
           payload
         };
@@ -585,7 +674,7 @@ describe('[integration/upload] "POST" spec', function () {
       before('reload file', function () {
         const params = {
           method: 'GET',
-          url: '/files5/deeper/and/deeper/test-NF.pdf'
+          url: '/files6/deeper/and/deeper/test-NF.pdf'
         };
 
         return server.inject(params)
@@ -597,7 +686,7 @@ describe('[integration/upload] "POST" spec', function () {
       before('delete file', function () {
         const params = {
           method: 'DELETE',
-          url: '/files5/deeper/and/deeper/test-NF.pdf'
+          url: '/files6/deeper/and/deeper/test-NF.pdf'
         };
 
         return server.inject(params)
@@ -634,7 +723,7 @@ describe('[integration/upload] "POST" spec', function () {
     before('define route', function () {
       return server.route({
         method: ['GET', 'POST', 'DELETE'],
-        path: '/files6/{path*}',
+        path: '/files7/{path*}',
         handler: {
           s3: {
             s3Params: {
@@ -672,7 +761,7 @@ describe('[integration/upload] "POST" spec', function () {
 
         const params = {
           method: 'POST',
-          url: '/files6/files2',
+          url: '/files7/files2',
           headers: form.getHeaders(),
           payload
         };
